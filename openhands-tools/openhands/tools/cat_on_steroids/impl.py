@@ -1,7 +1,7 @@
 from openhands.sdk.tool import ToolExecutor
 
-from .definition import CatOnSteroidsAction, CatOnSteroidsObservation
-from .preprocessor import DocumentPreprocessor, PageDict  # Assuming a path
+from openhands.tools.cat_on_steroids.definition import CatOnSteroidsAction, CatOnSteroidsObservation
+from openhands.tools.cat_on_steroids.preprocessor import DocumentPreprocessor, PageDict  # Assuming a path
 
 
 # Dictionary to cache parsed documents (performance optimization)
@@ -11,12 +11,7 @@ _DOC_CACHE: dict[str, DocumentPreprocessor] = {}
 class CatOnSteroidsExecutor(
     ToolExecutor[CatOnSteroidsAction, CatOnSteroidsObservation]
 ):
-    # No hierarchical tools needed for core logic, but we can pass a dummy executor
-    # if required by the OpenHands framework structure.
-    # We use a placeholder here as the logic is fully internal Python.
-    # def __init__(self, bash_executor: BashExecutor):
-    #     pass
-
+ 
     def _get_preprocessor(self, doc_path: str) -> DocumentPreprocessor:
         """Handles document loading and caching."""
         if doc_path not in _DOC_CACHE:
@@ -40,12 +35,12 @@ class CatOnSteroidsExecutor(
 
         for match in re.finditer(pattern, full_text, re.IGNORECASE):
             # Map the match index back to the structured PageDict
-            page_dict = preprocessor.map_index_to_page_dict(match.start())
+            page_dict = preprocessor.map_index_to_page(match)[0] # TODO: implement list management to handle corner cases where content spans multiple pages
 
             # Use the page_num as a unique identifier to ensure we only include each page once
-            if page_dict["page_num"] not in matched_pages:
+            if page_dict["page_number"] not in matched_pages:
                 matches.append(page_dict)
-                matched_pages.add(page_dict["page_num"])
+                matched_pages.add(page_dict["page_number"])
 
         return matches
 
@@ -68,7 +63,7 @@ class CatOnSteroidsExecutor(
             # Level 1: Metadata Summary
             if action.search_level == 1:
                 metadata_summary = [
-                    f"Page {m['page_num']}: {m.get('section_title', 'N/A')}"
+                    f"Page {m['page_number']}(section level,title,page number): {m['toc_details']}\nContent:{m["page_content"][:100]}..."
                     for m in all_matches
                 ]
                 return CatOnSteroidsObservation(
@@ -85,19 +80,18 @@ class CatOnSteroidsExecutor(
                     total_results=total_count, content_results=content_results
                 )
             else:
-                return CatOnSteroidsAction(
-                    total_results=0, content_results="arcion.search_level is missing!!"
+                return CatOnSteroidsObservation(
+                    total_results=0, content_results="action.search_level is missing!!"
                 )
 
         # --- Viewing Logic (COS) ---
         else:
             # Assume no search pattern means the user wants the global document metadata (ToC)
             doc_metadata = {
-                "total_pages": len(preprocessor.parsed_pages),
-                "sections": preprocessor.parsed_pages[0].get(
-                    "section_title", "N/A"
-                ),  # Example: Return first page section list
+                "total_pages": preprocessor.page_count,
+                "sections": preprocessor.toc,
                 "full_text_length": len(preprocessor.full_text),
+                "pdf_metadata": preprocessor.doc_metadata
             }
             # For a true COS view, you might want to return the ToC structure explicitly here
 

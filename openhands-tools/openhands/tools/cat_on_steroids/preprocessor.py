@@ -1,5 +1,6 @@
-from typing import Any
-
+from typing import Any,DefaultDict
+from pathlib import Path
+from openhands.tools.cat_on_steroids.pdf_to_dict import process_pdf_reference_manual,map_string_index_to_page
 
 # Define the structured data type
 PageDict = dict[str, Any]
@@ -9,18 +10,30 @@ PageDict = dict[str, Any]
 class DocumentPreprocessor:
     def __init__(self, doc_path: str):
         self.doc_path: str = doc_path
-        self.full_text: str = ""
-        self.parsed_pages: list[PageDict] = []
+        
+        self.processed_data = DefaultDict()
         self._load_and_process()
 
     def _load_and_process(self):
-        # Implementation to read PDF/Markdown, use PyMuPDF, create page boundary markers,
-        # and populate self.full_text and self.parsed_pages (List[PageDict])
-        # Note: This is where the complex parsing logic resides.
-        pass
+        self.processed_data = process_pdf_reference_manual(patterns=self.doc_path)
+
+    @property
+    def full_text(self):
+        return self.processed_data["full_text"]
+    @property
+    def page_count(self):
+        return self.processed_data["page_count"]
+    @property
+    def toc(self):
+        return self.processed_data["toc"]
+    @property
+    def doc_metadata(self):
+        return self.processed_data["metadata"]
 
     # Simple method to find which page dict a text index belongs to (for regex mapping)
-    def map_index_to_page_dict(self, index: int) -> PageDict:
+    def map_index_to_page(self, match):
         # Implementation to find the PageDict based on its index in the full_text document
-        stub = PageDict()
-        return stub
+        filtered_pages = map_string_index_to_page(pages=self.processed_data["pages"],match=match)
+        return filtered_pages
+
+

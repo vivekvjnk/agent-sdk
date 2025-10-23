@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import Field
 
 from openhands.sdk.llm import TextContent
-
+from openhands.tools.cat_on_steroids.pdf_to_dict import page_dict_to_string
 
 if TYPE_CHECKING:
     from openhands.sdk.conversation.state import ConversationState
@@ -22,12 +22,12 @@ class CatOnSteroidsAction(Action):
     """
 
     doc_path: str = Field(
-        description="Absolute path to the engineering reference document (PDF/Markdown)."
+        description="Absolute path to the PDF document."
     )
 
     # --- Search Parameters (FOS) ---
     search_pattern: str | None = Field(
-        default=None, description="The keyword or regex pattern to search for."
+        default=None, description="The keyword or regex pattern to search for in file contents."
     )
     is_regex: bool = Field(
         default=False, description="Set to True if search_pattern is a full regex."
@@ -65,7 +65,7 @@ class CatOnSteroidsObservation(Observation):
                 more = "\n..." if self.total_results > 20 else ""
                 ret = (
                     f"Found {self.total_results} occurrences of the search term.\n"
-                    f"Metadata Summary (Page: Section):\n{summary_text}{more}\n"
+                    f"Metadata Summary (Page: Section and subsection details):\n{summary_text}\n{more}\n"
                     f"To see full content, call CatOnSteroidsAction with search_level=2."
                 )
                 return [TextContent(text=ret)]
@@ -74,7 +74,7 @@ class CatOnSteroidsObservation(Observation):
             elif self.content_results:
                 # Format the list of dictionaries into a clean, LLM-digestible string
                 formatted_results = "\n\n--- Result ---\n\n".join(
-                    str(r) for r in self.content_results
+                    page_dict_to_string(r) for r in self.content_results
                 )
                 ret = (
                     f"Found {self.total_results} results. Returning {len(self.content_results)} complete pages.\n"
@@ -93,10 +93,10 @@ class CatOnSteroidsObservation(Observation):
         ]
 
 
-_COS_DESCRIPTION = """Powerful tool for navigating and searching large engineering reference documents (PDFs, Datasheets).
+TOOL_DESCRIPTION = """Powerful tool for navigating and searching large engineering/scientific reference documents (PDFs, Datasheets,Text books, Research reports etc). Designed as an intelligent extension of `cat` bash tool.
 * Converts documents into structured, metadata-rich pages for reliable AI consumption.
-* **VIEW MODE (COS):** Used to retrieve overall document structure (Table of Contents, page count).
-* **SEARCH MODE (FOS):** Used to find keywords or regex patterns, returning structured page data.
+* **VIEW MODE:** Used to retrieve overall document structure (Table of Contents, page count).
+* **SEARCH MODE:** Used to find keywords or regex patterns, returning structured page data.
 * **Search Levels:**
     * Level 1 (Default): Returns a fast summary of page and section locations (metadata). Use this first to scope your search.
     * Level 2: Returns the complete, rich dictionary content for the matched pages (full data for reasoning).
@@ -106,7 +106,7 @@ _COS_DESCRIPTION = """Powerful tool for navigating and searching large engineeri
 
 cos_tool = ToolDefinition(
     name="cat_on_steroids",
-    description=_COS_DESCRIPTION,
+    description=TOOL_DESCRIPTION,
     action_type=CatOnSteroidsAction,
     observation_type=CatOnSteroidsObservation,
 )
@@ -122,7 +122,7 @@ class CatOnSteroidsTool(ToolDefinition[CatOnSteroidsAction, CatOnSteroidsObserva
         return [
             cls(
                 name=cos_tool.name,
-                description=_COS_DESCRIPTION,
+                description=TOOL_DESCRIPTION,
                 action_type=CatOnSteroidsAction,
                 observation_type=CatOnSteroidsObservation,
                 annotations=cos_tool.annotations,
