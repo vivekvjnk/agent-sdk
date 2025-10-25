@@ -17,6 +17,7 @@ import litellm
 from pythonjsonlogger.json import JsonFormatter
 from rich.console import Console
 from rich.logging import RichHandler
+from datetime import datetime, timezone
 
 
 # ========= ENV (loaded at import) =========
@@ -56,19 +57,19 @@ ENV_DEBUG_LLM = os.getenv("DEBUG_LLM", "false").lower() in {"1", "true", "yes"}
 # ========= LiteLLM controls =========
 _ENABLE_LITELLM_DEBUG = False
 if ENV_DEBUG_LLM:
-    confirmation = input(
-        "\n⚠️ WARNING: You are enabling DEBUG_LLM which may expose sensitive "
-        "information like API keys.\nThis should NEVER be enabled in production.\n"
-        "Type 'y' to confirm you understand the risks: "
-    )
-    if confirmation.lower() == "y":
-        _ENABLE_LITELLM_DEBUG = True
-        litellm.suppress_debug_info = False
-        litellm.set_verbose = True  # type: ignore
-    else:
-        print("DEBUG_LLM disabled due to lack of confirmation")
-        litellm.suppress_debug_info = True
-        litellm.set_verbose = False  # type: ignore
+    # confirmation = input(
+    #     "\n⚠️ WARNING: You are enabling DEBUG_LLM which may expose sensitive "
+    #     "information like API keys.\nThis should NEVER be enabled in production.\n"
+    #     "Type 'y' to confirm you understand the risks: "
+    # )
+    # if confirmation.lower() == "y":
+    _ENABLE_LITELLM_DEBUG = True
+    litellm.suppress_debug_info = False
+    litellm.set_verbose = True  # type: ignore
+    # else:
+    #     print("DEBUG_LLM disabled due to lack of confirmation")
+    #     litellm.suppress_debug_info = True
+    #     litellm.set_verbose = False  # type: ignore
 else:
     litellm.suppress_debug_info = True
     litellm.set_verbose = False  # type: ignore
@@ -135,8 +136,11 @@ def setup_logging(
 
     if to_file:
         os.makedirs(directory, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        log_filename = os.path.join(directory, f"app-{timestamp}.log")
+
         fh = TimedRotatingFileHandler(
-            os.path.join(directory, "app.log"),
+            log_filename,
             when=rotate_when,
             backupCount=keep,
             encoding="utf-8",

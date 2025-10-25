@@ -196,6 +196,10 @@ class Observation(Schema, ABC):
         """Get the observation string to show to the agent."""
 
     @property
+    def to_condensed_llm_content(self) -> Sequence[TextContent | ImageContent]:
+        """Get the observation string to show to the agent."""
+
+    @property
     def visualize(self) -> Text:
         """Return Rich Text representation of this action.
 

@@ -41,7 +41,15 @@ class ObservationEvent(ObservationBaseEvent):
             content.append("\nResult:\n", style="bold")
             content.append(to_viz)
         return content
-
+    
+    def to_condensed_llm_message(self) -> Message:
+        return Message(
+            role="tool",
+            content=self.observation.to_condensed_llm_content,
+            name=self.tool_name,
+            tool_call_id=self.tool_call_id,
+        )
+    
     def to_llm_message(self) -> Message:
         return Message(
             role="tool",

@@ -29,7 +29,10 @@ class DocumentPreprocessor:
     @property
     def doc_metadata(self):
         return self.processed_data["metadata"]
-
+    
+    def get_page(self,page_number):
+        index= page_number-1
+        return self.processed_data["pages"][index]
     # Simple method to find which page dict a text index belongs to (for regex mapping)
     def map_index_to_page(self, match):
         # Implementation to find the PageDict based on its index in the full_text document

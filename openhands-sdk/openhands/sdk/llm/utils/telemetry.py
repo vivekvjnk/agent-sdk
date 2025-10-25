@@ -296,12 +296,15 @@ class Telemetry(BaseModel):
             ):
                 data["kwargs"].pop("tools")
             with open(fname, "w") as f:
+                logger.debug(f"Telemetry data:\n{data}")
                 f.write(json.dumps(data, default=_safe_json))
         except Exception as e:
+            logger.exception(f"Telemetry logging failed: {e}")
             warnings.warn(f"Telemetry logging failed: {e}")
+            raise
 
 
-def _safe_json(obj: Any) -> Any:
+def _safe_json_old(obj: Any) -> Any:
     # Centralized serializer for telemetry logs.
     # Today, responses are Pydantic ModelResponse or ResponsesAPIResponse; rely on it.
     if isinstance(obj, ModelResponse) or isinstance(obj, ResponsesAPIResponse):
@@ -312,3 +315,17 @@ def _safe_json(obj: Any) -> Any:
         return obj.__dict__
     except Exception:
         return str(obj)
+
+def _safe_json(obj: Any) -> Any:
+    # 1. Pydantic V2 Recommended Method
+    if isinstance(obj, BaseModel):
+        # Use model_dump for Pydantic V2 objects, which correctly handles exclusions/aliases
+        return obj.model_dump() 
+    
+    # 2. General Object Fallbacks (Safest for JSON)
+    try:
+        # Tries to get a simple string representation
+        return str(obj)
+    except Exception:
+        # Ultimate fallback for truly broken or un-serializable objects
+        return f"<<Non-serializable object of type {type(obj).__name__}>>"

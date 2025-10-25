@@ -8,8 +8,7 @@ from openhands.sdk import (
     Conversation,
     Event,
     LLMConvertibleEvent,
-    get_logger,
-    setup_logging
+    get_logger
 )
 from openhands.sdk.tool import Tool, register_tool
 from openhands.tools.browser_use import BrowserToolSet
@@ -34,7 +33,13 @@ llm = LLM(
 )
 
 # Tools
+
+workspace = "/home/pst/Documents/crazy_orca/agent_workspace/"
+os.chdir(workspace)
+
 cwd = os.getcwd()
+print(f"Current working directory: {cwd}")
+
 register_tool("BashTool", BashTool)
 register_tool("BrowserToolSet", BrowserToolSet)
 register_tool("CatOnSteroidsTool", CatOnSteroidsTool)
@@ -62,7 +67,8 @@ conversation = Conversation(
 )
 
 conversation.send_message(
-    "How many center aligned PWM timers are available in STM32F405?"
+    "How many center aligned PWM timers are available in TM4C1230C3PM?"
+    "NB: Always check working directory for available documents."
 )
 conversation.run()
 
