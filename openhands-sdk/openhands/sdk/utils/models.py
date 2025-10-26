@@ -101,8 +101,15 @@ class OpenHandsModel(BaseModel):
         # This was overridden because it seems there is a bug where sometimes
         # duplicate fields are produced by model_dump_json which does not appear
         # in model_dump
-        kwargs["mode"] = "json"
-        return json.dumps(self.model_dump(**kwargs))
+        kwargs["mode"] = "json"        
+        try:
+            dumped = self.model_dump(**kwargs)
+            # Use ensure_ascii=False to preserve unicode, but with error handling
+            return json.dumps(dumped, ensure_ascii=False, default=_safe_default)
+        except (UnicodeDecodeError, UnicodeEncodeError, TypeError) as e:
+            # Fallback: force ASCII encoding which is always safe
+            dumped = self.model_dump(**kwargs)
+            return json.dumps(dumped, ensure_ascii=True, default=_safe_default)
 
     def __init_subclass__(cls, **kwargs):
         """
@@ -114,6 +121,17 @@ class OpenHandsModel(BaseModel):
 
         return super().__init_subclass__(**kwargs)
 
+
+def _safe_default(obj):
+    """Safely convert objects that can't be serialized"""
+    if isinstance(obj, bytes):
+        try:
+            return obj.decode('utf-8')
+        except UnicodeDecodeError:
+            import base64
+            return base64.b64encode(obj).decode('ascii')
+    # Convert any other non-serializable object to string
+    return str(obj)
 
 class DiscriminatedUnionMixin(OpenHandsModel, ABC):
     """A Base class for members of tagged unions discriminated by the class name.

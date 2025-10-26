@@ -10,6 +10,10 @@ from openhands.sdk.event.types import EventID, SourceType
 from openhands.sdk.llm import ImageContent, Message, TextContent
 from openhands.sdk.utils.models import DiscriminatedUnionMixin
 
+from openhands.sdk.logger import get_logger
+
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from openhands.sdk.event.llm_convertible import ActionEvent
@@ -128,11 +132,13 @@ class LLMConvertibleEvent(Event, ABC):
                 tool_name = getattr(event, "tool_name", None)
                 # If tool is CatOnSteroidsTool and this is not the latest event,
                 # use condensed representation when available; otherwise use full.
+                
+                logger.debug(f"Tool info:\n{event}\nTool name: {tool_name}")
                 if (
-                    tool_name == "CatOnSteroidsTool"
-                    and event.id != latest_event.id
-                    and hasattr(event, "to_condensed_llm_message")
+                    tool_name == "cat_on_steroids" and 
+                    event.id != latest_event.id
                 ):
+                    logger.debug(f"Calling to_condensed_llm_message()")
                     messages.append(event.to_condensed_llm_message())
                 else:
                     messages.append(event.to_llm_message())

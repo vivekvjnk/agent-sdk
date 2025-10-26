@@ -315,7 +315,6 @@ def page_dict_to_string(page_dict: dict, mode: str = "prompt") -> str:
 def map_string_index_to_page(match,pages):
     
     page,index = find_interval(pages=pages,x=match.start())
-    print(f"Printing page for debug:{page}")
     # check if match indices are inside the page or not
     if match.end() <= page["page_indices"]["end_index"]:
         return [page]

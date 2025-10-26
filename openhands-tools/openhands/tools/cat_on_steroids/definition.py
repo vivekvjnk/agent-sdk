@@ -5,6 +5,7 @@ from pydantic import Field
 from textwrap import shorten
 
 from openhands.sdk.llm import TextContent
+from openhands.sdk import get_logger
 from openhands.tools.cat_on_steroids.pdf_to_dict import page_dict_to_string
 
 if TYPE_CHECKING:
@@ -16,6 +17,8 @@ from openhands.sdk.tool import (
     ToolDefinition,
 )
 
+
+logger = get_logger(__name__)
 
 class CatOnSteroidsAction(Action):
     """
@@ -37,13 +40,20 @@ class CatOnSteroidsAction(Action):
         ),
     )
     pages: str = Field(
-        default="",
-        description=(
-            "Specify one or more pages to retrieve from the parsed document. "
-            "Accepts single page numbers (e.g., 3), lists of pages (e.g., [1, 3, 5]), "
-            "or page ranges (e.g., '2-5'). Mixed inputs are also supported, such as ['1-3', 5, 7]. "
+    default="",
+    description=(
+        "String specifying which pages to retrieve from the parsed document. "
+        "The **entire** specification string must be enclosed in single quotes (`'...'`). "
+        "Use double quotes (`\"...\"`) for any strings *inside* list structures.\n"
+        "Supported formats include:\n"
+        "- Single page: `'3'`\n"
+        "- List of pages: `'[1, 3, 5]'`\n"
+        "- Page range: `'2-5'`\n"
+        "- Mixed input (Recommended for ranges in a list): `'[\"1-3\", 5, 7]'`\n"
+        "If left empty, no specific page filtering is applied."
         ),
     )
+
     n_results: int = Field(
         default=10,
         description="Number of search results to return in Level 2. Use -1 for all results.",
@@ -56,7 +66,7 @@ class CatOnSteroidsObservation(Observation):
     """
 
     total_results: int = 0
-    metadata_summary: list[str] = Field(default_factory=list)  # For Level 1 output
+    metadata_summary: list[dict] = Field(default_factory=list)  # For Level 1 output
     content_results: list[dict] = Field(default_factory=list)  # For Level 2 output
     page_results: list[dict] = Field(default_factory=list) # For retrieving pages
     doc_metadata: dict = Field(default_factory=dict)  # For COS (viewing) output
@@ -67,20 +77,13 @@ class CatOnSteroidsObservation(Observation):
         if self.total_results > 0:
             # Level 1 Summary
             if self.metadata_summary:
-                # summary_text = "\n".join(self.metadata_summary[:20])
-                # more = "\n..." if self.total_results > 20 else ""
-                # ret = (
-                #     f"Found {self.total_results} occurrences of the search term.\n"
-                #     f"Metadata Summary (Page: Section and subsection details):\n{summary_text}\n{more}\n"
-                #     f"To see full content, call CatOnSteroidsAction with search_level=2."
-                # )
-
-                first_20_res = format_cos_search_output(pages=self.metadata_summary[:20]) # only return first 20 occurrences of the search result
-                more = ""
-                if len(self.metadata_summary) > 20:
-                    truncated_results_count = len(self.metadata_summary)-20
-                    more = f"\n... and more...\ntruncated {truncated_results_count} results ..."
-                meta_search_results = first_20_res + more
+                first_20_res = format_cos_search_output(pages=self.metadata_summary[:40]) # only return first 40 occurrences of the search result
+                # more = ""
+                # if len(self.metadata_summary) > 40:
+                #     truncated_results_count = len(self.metadata_summary)-40
+                #     more = f"\n... and more...\ntruncated {truncated_results_count} results ..."
+                # meta_search_results = f"{first_20_res}{more}"
+                meta_search_results = first_20_res
                 return [TextContent(text=meta_search_results)]
 
             # Level 2 Content
@@ -116,28 +119,44 @@ class CatOnSteroidsObservation(Observation):
         ]
     
     @property
-    def to_condensed_llm_message(self) -> Sequence[TextContent]:
+    def to_condensed_llm_content(self) -> Sequence[TextContent]:
+
+        logger.debug(
+            "to_condensed_llm_message called: total_results=%s, metadata_summary_len=%s, content_results_len=%s, page_results_len=%s, doc_metadata_present=%s",
+            self.total_results,
+            len(self.metadata_summary),
+            len(self.content_results),
+            len(self.page_results),
+            bool(self.doc_metadata),
+        )
+
         # --- Handle Search Results (FOS) ---
         if self.total_results > 0:
+            logger.debug("Branch: total_results > 0")
+
             # Level 1 Summary
             if self.metadata_summary:
-                # summary_text = "\n".join(self.metadata_summary[:20])
-                # more = "\n..." if self.total_results > 20 else ""
-                # ret = (
-                #     f"Found {self.total_results} occurrences of the search term.\n"
-                #     f"Metadata Summary (Page: Section and subsection details):\n{summary_text}\n{more}\n"
-                #     f"To see full content, call CatOnSteroidsAction with search_level=2."
-                # )
-                first_20_res = format_cos_search_output(pages=self.metadata_summary[:20]) # only return first 20 occurrences of the search result
-                more = ""
-                if len(self.metadata_summary) > 20:
-                    truncated_results_count = len(self.metadata_summary)-20
-                    more = f"\n... and more...\ntruncated {truncated_results_count} results ..."
-                meta_search_results = first_20_res + more
+                logger.debug(
+                    "Branch: metadata_summary present (total metadata entries=%d). Returning condensed top entries.",
+                    len(self.metadata_summary),
+                )
+
+                first_20_res = format_cos_search_output(pages=self.metadata_summary[:20])  # only return first 20 occurrences of the search result
+                meta_search_results = first_20_res
+                logger.debug(
+                    "Returning %d metadata summary entries (condensed to %d).",
+                    len(self.metadata_summary),
+                    len(self.metadata_summary[:20]),
+                )
                 return [TextContent(text=meta_search_results)]
 
             # Level 2 Content
             elif self.content_results:
+                logger.debug(
+                    "Branch: content_results present (total_results=%d, content_results_len=%d). Preparing full content pages.",
+                    self.total_results,
+                    len(self.content_results),
+                )
                 # Format the list of dictionaries into a clean, LLM-digestible string
                 formatted_results = "\n\n--- <Page Break> ---\n\n".join(
                     page_dict_to_string(r) for r in self.content_results
@@ -146,8 +165,13 @@ class CatOnSteroidsObservation(Observation):
                     f"Found {self.total_results} results. Returning {len(self.content_results)} complete pages.\n"
                     f"Content:\n{formatted_results}"
                 )
+                logger.debug("Returning Level 2 content with %d pages.", len(self.content_results))
                 return [TextContent(text=ret)]
             elif self.page_results:
+                logger.debug(
+                    "Branch: page_results present (page_results_len=%d). Preparing requested pages.",
+                    len(self.page_results),
+                )
                 # Format the list of dictionaries into a clean, LLM-digestible string
                 formatted_results = "\n\n--- <Page Break> ---\n\n".join(
                     page_dict_to_string(r) for r in self.page_results
@@ -156,14 +180,18 @@ class CatOnSteroidsObservation(Observation):
                     f"Returning {len(self.page_results)} complete pages.\n"
                     f"Content:\n{formatted_results}"
                 )
+                logger.debug("Returning page retrieval content with %d pages.", len(self.page_results))
                 return [TextContent(text=ret)]
 
         # --- Handle Document Metadata (COS View) ---
         elif self.doc_metadata:
+            logger.debug("Branch: doc_metadata present. Formatting TOC with level=2.")
             # Simple metadata view (e.g., Table of Contents)
-            formatted_meta = format_toc(metadata=self.doc_metadata,level=2)
+            formatted_meta = format_toc(metadata=self.doc_metadata, level=2)
+            logger.debug("Returning formatted TOC (doc_metadata keys=%s).", list(self.doc_metadata.keys()))
             return [TextContent(text=formatted_meta)]
 
+        logger.debug("No relevant data returned from COS tool.")
         return [
             TextContent(text="COS tool executed, but no relevant data was returned.")
         ]
@@ -244,44 +272,64 @@ def format_cos_search_output(pages: list[dict], content_preview_chars: int = 120
     Returns:
         str: Nicely formatted string summary.
     """
-
     lines = []
-    total_pages = len(pages)
-    lines.append(f"Found **{total_pages}** matching pages.\n")
-    #     f"Page {m['page_number']}(section level,title,page number): {m['toc_details']}\nContent:{m["page_content"][:100]}..."
+    
     for page in pages:
         page_num = page.get("page_number", "Unknown")
-        sections = page.get("toc_details", [])
-        content = (page.get("page_content") or "").strip()
-
-        lines.append(f"\n📄 **Page {page_num}**")
+        # Note: The key for sections in the function body is "toc_details", 
+        # but the docstring says "sections". Using "toc_details" to match the body.
+        sections = page.get("toc_details", []) 
+        
+        # --- START FIX: Robust Content Sanitization ---
+        raw_content = page.get("page_content") 
+        
+        # 1. Ensure it's a string, not bytes, and handle None
+        content = ""
+        if isinstance(raw_content, bytes):
+            # Decode using a lenient codec that can handle 0x89 (like latin-1), 
+            # then normalize to clean UTF-8.
+            content = raw_content.decode('latin-1', errors='replace').encode('utf-8', errors='replace').decode('utf-8')
+        elif isinstance(raw_content, str):
+            # If it's already a string, normalize it to strip invalid characters
+            content = raw_content.encode('utf-8', errors='ignore').decode('utf-8')
+            
+        content = content.strip()
+        # --- END FIX ---
+        
+        lines.append(f"\n**Page {page_num}**")
 
         if sections:
-            # Group subsections under their respective hierarchy levels
             prev_level = 0
             for idx, (level, title, pnum) in enumerate(sections):
                 indent = "    " * (level - 1)
                 lines.append(f"{indent}- {title}  (p.{pnum})")
 
-                # Look ahead to count truncated subsections (if next items are deeper)
                 next_idx = idx + 1
                 if next_idx < len(sections):
-                    next_level = sections[next_idx][0]
-                    if next_level > level:
-                        deeper = sum(1 for lvl, _, _ in sections[next_idx:] if lvl > level)
-                        lines.append(f"{indent}    ... {deeper} subsections truncated")
+                    # Safely access the next level
+                    try:
+                        next_level = sections[next_idx][0]
+                        if next_level > level:
+                            # Count only immediate deeper levels (optional refinement)
+                            deeper = sum(1 for lvl, _, _ in sections[next_idx:] if lvl > level)
+                            lines.append(f"{indent}    ... {deeper} subsections truncated")
+                    except IndexError:
+                        # Should not happen if next_idx is checked, but for safety
+                        pass
 
         else:
             lines.append("  - [No section hierarchy found]")
 
         # Add truncated content preview
-        preview = shorten(content.replace("\n", " "), width=content_preview_chars, placeholder="...")
-        lines.append(f"  🧩 Preview: {preview}")
+        preview_input = content.replace("\n", " ")
+        
+        # Ensure 'shorten' is robust (it generally is, but we clean the input anyway)
+        preview = shorten(preview_input, width=content_preview_chars, placeholder="...")
+        lines.append(f"   Preview: {preview}")
 
     lines.append("\n*To see full content, call `CatOnSteroidsAction` with `search_level=2`.*")
 
     return "\n".join(lines)
-
 
 TOOL_DESCRIPTION_V0 = """Powerful tool for navigating and searching large engineering or scientific reference documents (PDFs, datasheets, textbooks, research reports, etc.). 
 Designed as an intelligent extension of the Unix `cat` command.
@@ -314,7 +362,7 @@ Designed as an intelligent extension of the Unix `cat` command.
 * Use this tool to efficiently extract precise information (e.g., register definitions, thermal limits, or circuit parameters) without scanning entire documents manually.
 
 **CRITICAL PAGE LIMIT RESTRICTIONS:**
-⚠️ NEVER request results that span more than 10 pages in a single invocation. This causes context overload and system failure.
+!! NEVER request results that span more than 10 pages in a single invocation. This causes context overload and system failure.
 * **PAGE RETRIEVAL MODE:** Request maximum 10 pages total (e.g., pages [1,2,3,4,5,6,7,8,9,10] or range '1-10' is acceptable; '1-15' or [1,5,8,12,15,18,20,22,25,30] is NOT).
 * **SEARCH MODE:** If search results exceed 10 pages:
     - Use Level 1 first to scope matches

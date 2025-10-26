@@ -296,7 +296,7 @@ class Telemetry(BaseModel):
             ):
                 data["kwargs"].pop("tools")
             with open(fname, "w") as f:
-                logger.debug(f"Telemetry data:\n{data}")
+                # logger.debug(f"Telemetry data:\n{data}")
                 f.write(json.dumps(data, default=_safe_json))
         except Exception as e:
             logger.exception(f"Telemetry logging failed: {e}")

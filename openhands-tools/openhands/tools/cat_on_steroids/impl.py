@@ -3,6 +3,10 @@ from openhands.sdk.tool import ToolExecutor
 from openhands.tools.cat_on_steroids.definition import CatOnSteroidsAction, CatOnSteroidsObservation
 from openhands.tools.cat_on_steroids.preprocessor import DocumentPreprocessor, PageDict  # Assuming a path
 
+import re
+import json
+import ast
+
 
 # Dictionary to cache parsed documents (performance optimization)
 _DOC_CACHE: dict[str, DocumentPreprocessor] = {}
@@ -26,7 +30,6 @@ class CatOnSteroidsExecutor(
         as a simple word/phrase and automatically escape it and add word
         boundaries so common simple searches behave as expected.
         """
-        import re
 
         # Characters that indicate the user likely provided a regex
         _REGEX_SPECIALS = set(r".^$*+?{}[]\|()")
@@ -69,25 +72,78 @@ class CatOnSteroidsExecutor(
                     "1,3,5"          -> [1, 3, 5]
                     "2-4"            -> [2, 3, 4]
                     "1-3,5,7-8"      -> [1, 2, 3, 5, 7, 8]
+                    '["1-10"]'       -> [1,2,...,10]   (JSON-like quoted range)
+                    "[1,2,3]"        -> [1,2,3]        (JSON-like numbers)
 
         Returns:
             list[dict]: List of page contents for all requested pages.
         """
 
         def expand_page_spec(spec: str) -> list[int]:
-            """Expand a single page or page range string into a list of ints."""
+            """Expand a single page, page range, or comma-separated list into a list of ints.
+            Also supports JSON-like list strings such as '["1-10"]' or '[1,2,3]'.
+            """
             spec = spec.strip()
             if not spec:
                 return []
-            if "-" in spec:
+
+            # Handle bracketed JSON/CSV-like lists: '["1-10"]', "[1,2,3]"
+            if spec.startswith("[") and spec.endswith("]"):
+                parsed = None
                 try:
-                    start, end = map(int, spec.split("-", 1))
+                    parsed = json.loads(spec)
+                except Exception:
+                    # Fallback to ast.literal_eval for cases like "['1-10']"
+                    try:
+                        parsed = ast.literal_eval(spec)
+                    except Exception as e:
+                        # If neither json.loads nor ast.literal_eval works, raise error.
+                        raise ValueError(f"Invalid list format: {spec}") from e
+
+                if isinstance(parsed, list):
+                    results: list[int] = []
+                    for item in parsed:
+                        # recurse for each element (handles numbers, ranges, quoted strings)
+                        results.extend(expand_page_spec(str(item)))
+                    return results
+                else:
+                    # Not a list after parsing; fall back to processing the string form
+                    spec = str(parsed).strip()
+
+            # Strip surrounding quotes if present: '"5"' or "'5'"
+            if (spec.startswith('"') and spec.endswith('"')) or (
+                spec.startswith("'") and spec.endswith("'")
+            ):
+                spec = spec[1:-1].strip()
+                
+            if not spec:
+                return []
+
+            # --- FIX: Handle Comma-Separated List (e.g., '1-3,5,7-8') ---
+            if "," in spec:
+                results: list[int] = []
+                # Split by comma and recursively call the function for each item
+                for item in spec.split(","):
+                    results.extend(expand_page_spec(item.strip()))
+                return results
+            # --- END FIX ---
+
+            # Handle range with optional spaces like "1-10" or "1 - 10"
+            if "-" in spec:
+                # Use regex to split by '-' with optional surrounding spaces
+                parts = re.split(r"\s*-\s*", spec, maxsplit=1)
+                if len(parts) != 2 or not parts[0] or not parts[1]:
+                    # This is now only reached if a single segment contains a malformed range
+                    raise ValueError(f"Invalid page range: {spec}")
+                try:
+                    start, end = map(int, parts)
                     if start > end:
                         start, end = end, start  # handle reversed input
                     return list(range(start, end + 1))
                 except ValueError:
                     raise ValueError(f"Invalid page range: {spec}")
             else:
+                # Handle single page number
                 try:
                     return [int(spec)]
                 except ValueError:
@@ -96,13 +152,16 @@ class CatOnSteroidsExecutor(
         # Split comma-separated list, expand each spec, flatten all results
         all_pages = []
         for part in pages.split(","):
+            part = part.strip()
+            if not part:
+                continue
             all_pages.extend(expand_page_spec(part))
 
         # Deduplicate and sort
         page_numbers = sorted(set(all_pages))
 
         # Retrieve content
-        page_contents:list[PageDict] = [preprocessor.get_page(page_number=p) for p in page_numbers]
+        page_contents: list[PageDict] = [preprocessor.get_page(page_number=p) for p in page_numbers]
         return page_contents
 
 

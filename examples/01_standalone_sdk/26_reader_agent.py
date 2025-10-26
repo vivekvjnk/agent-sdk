@@ -102,9 +102,17 @@ conversation = Conversation(
     agent=agent, callbacks=[conversation_callback], workspace=cwd
 )
 
+# Sample 2
+# conversation.send_message(
+#     "What are the DMA capabilities available in STM32F405 and TM4C1230C3PM?" 
+#     "Prepare a detailed comparison report between these two products and save it as 'comparison_report.md' in the workspace."
+# )
+
+# Sample 3
 conversation.send_message(
-    "What are the major communication protocols available in STM32F405 and TM4C1230C3PM?" 
-    "Prepare a detailed comparison report between these two products, focusing on the support for various communication protocols."
+    "What are the steps to configure DMA from ethernet controller to flash memory in STM32F405?" 
+    "Prepare a detailed guidance document('DMA_Ethernet_STM32F405.md') in the workspace. Incrementally capture all your findings and observations during exploration in the document."
+    "Make sure you refer the stm32f405 reference manual available in workspace."
 )
 conversation.run()
 
