@@ -197,7 +197,7 @@ class CatOnSteroidsExecutor(
             total_count = len(all_matches)
 
             # Level 1: Metadata Summary
-            if action.search_level == 1:
+            if action.search_level == "surface":
                 # metadata_summary = [
                 #     f"Page {m['page_number']}(section level,title,page number): {m['toc_details']}\nContent:{m["page_content"][:100]}..."
                 #     for m in all_matches
@@ -207,7 +207,7 @@ class CatOnSteroidsExecutor(
                 )
 
             # Level 2: Complete Content
-            elif action.search_level == 2:
+            elif action.search_level == "deep":
                 # Apply N limit (-1 means all)
                 limit = action.n_results if action.n_results != -1 else total_count
                 content_results = all_matches[:limit]

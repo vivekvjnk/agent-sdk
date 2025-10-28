@@ -32,11 +32,11 @@ class CatOnSteroidsAction(Action):
     search_pattern: str | None = Field(
         default=None, description="The keyword or regex pattern to search for in file contents. **NOTE: search is CASE SENSITIVE**"
     )
-    search_level: Literal[1, 2] = Field(
+    search_level: Literal["surface", "deep"] = Field(
         default=1,
         description=(
-            "Level 1: Returns only metadata (page, section, count) for an overview. All matches are returned."
-            "Level 2: Returns the complete content (dictionary format) of the top N results."
+            "surface: Returns only metadata (page, section, count) for an overview. All matches are returned."
+            "deep: Returns the complete content (dictionary format) of the top N results."
         ),
     )
     pages: str = Field(
@@ -56,7 +56,7 @@ class CatOnSteroidsAction(Action):
 
     n_results: int = Field(
         default=10,
-        description="Number of search results to return in Level 2. Use -1 for all results.",
+        description="Number of search results to return in \"deep\" search level. Use -1 for all results.",
     )
 
 
@@ -357,19 +357,19 @@ Designed as an intelligent extension of the Unix `cat` command.
     * Mixed inputs are supported, such as ['1-3', 5, 8].
     * Ignored if a search_pattern is provided.
 * **Search Levels:**
-    * Level 1 (default): Returns a concise summary of page and section metadata where matches occur — ideal for quick scoping.
-    * Level 2: Returns the full, rich dictionary data for each matched page — ideal for reasoning or downstream AI processing.
+    * surface (default): Returns a concise summary of page and section metadata where matches occur — ideal for quick scoping.
+    * deep: Returns the full, rich dictionary data for each matched page — ideal for reasoning or downstream AI processing.
 * Use this tool to efficiently extract precise information (e.g., register definitions, thermal limits, or circuit parameters) without scanning entire documents manually.
 
 **CRITICAL PAGE LIMIT RESTRICTIONS:**
 !! NEVER request results that span more than 10 pages in a single invocation. This causes context overload and system failure.
 * **PAGE RETRIEVAL MODE:** Request maximum 10 pages total (e.g., pages [1,2,3,4,5,6,7,8,9,10] or range '1-10' is acceptable; '1-15' or [1,5,8,12,15,18,20,22,25,30] is NOT).
-* **SEARCH MODE:** If search results exceed 10 pages:
-    - Use Level 1 first to scope matches
+* **SEARCH LEVEL:** If search results exceed 10 pages:
+    - Use "surface" level first to scope matches
     - Narrow your search pattern to be more specific
     - Split into multiple targeted queries focusing on different sections/keywords
     - Retrieve only the most relevant 10 pages maximum per call
-* **Best Practice:** Always start with VIEW MODE or Level 1 search to understand document structure, then make focused queries for specific pages.
+* **Best Practice:** Always start with VIEW MODE or "surface" level search to understand document structure, then make focused queries for specific pages.
 * **If you need information across >10 pages:** Make multiple sequential tool calls, each retrieving ≤10 pages.
 """
 

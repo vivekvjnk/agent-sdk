@@ -119,6 +119,24 @@ def extract_page_data(doc) -> List[Dict[str, Any]]:
     Returns:
         List of dictionaries containing page details.
     """
+    def sanitize_utf8(text: str) -> str:
+        """
+        Ensures text contains only valid UTF-8 characters.
+        Replaces invalid characters with a placeholder.
+        """
+        if isinstance(text, bytes):
+            # If we receive bytes, decode with error handling
+            return text.decode('utf-8', errors='replace')
+        
+        # If it's already a string, encode and decode to catch any issues
+        try:
+            # This will catch any surrogate pairs or invalid Unicode
+            text.encode('utf-8')
+            return text
+        except UnicodeEncodeError:
+            # Replace invalid characters with the Unicode replacement character
+            return text.encode('utf-8', errors='replace').decode('utf-8')
+    
     pages = []
     full_text = ""
     for i in range(doc.page_count):
@@ -131,7 +149,10 @@ def extract_page_data(doc) -> List[Dict[str, Any]]:
             "rotation": page.rotation,
             "number": i + 1,
         }
-        page_content = page.get_text("text")
+        
+        # Extract and sanitize page content
+        page_content_raw = page.get_text("text")
+        page_content = sanitize_utf8(page_content_raw)
         
         marker = f"\n\n<<PAGE_BREAK:{page_number}>>\n\n"
         start_index = len(full_text)
