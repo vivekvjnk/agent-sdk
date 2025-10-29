@@ -1,7 +1,7 @@
 """Delegate tool definitions for OpenHands agents."""
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Optional
 
 from pydantic import Field
 
@@ -12,6 +12,7 @@ from openhands.sdk.tool.tool import (
     ToolAnnotations,
     ToolDefinition,
 )
+from openhands.sdk import AgentContext
 
 
 if TYPE_CHECKING:
@@ -145,6 +146,7 @@ class DelegateTool(ToolDefinition[DelegateAction, DelegateObservation]):
         cls,
         conv_state: "ConversationState",
         max_children: int = 5,
+        agent_context: Optional[AgentContext] = None
     ) -> Sequence["DelegateTool"]:
         """Initialize DelegateTool with a DelegateExecutor.
 
@@ -165,7 +167,7 @@ class DelegateTool(ToolDefinition[DelegateAction, DelegateObservation]):
 
         # Initialize the executor without parent conversation
         # (will be set on first call)
-        executor = DelegateExecutor(max_children=max_children)
+        executor = DelegateExecutor(max_children=max_children,agent_context=agent_context)
 
         # Initialize the parent Tool with the executor
         return [

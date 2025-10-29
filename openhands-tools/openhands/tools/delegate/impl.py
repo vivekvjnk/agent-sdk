@@ -1,7 +1,7 @@
 """Implementation of delegate tool executor."""
 
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from openhands.sdk.conversation.impl.local_conversation import LocalConversation
 from openhands.sdk.conversation.response_utils import get_agent_final_response
@@ -9,6 +9,8 @@ from openhands.sdk.logger import get_logger
 from openhands.sdk.tool.tool import ToolExecutor
 from openhands.tools.delegate.definition import DelegateObservation
 from openhands.tools.preset.default import get_default_agent
+
+from openhands.sdk import AgentContext
 
 
 if TYPE_CHECKING:
@@ -25,12 +27,12 @@ class DelegateExecutor(ToolExecutor):
     - Delegating tasks to sub-agents and waiting for results (blocking)
     """
 
-    def __init__(self, max_children: int = 5):
+    def __init__(self, max_children: int = 5,agent_context:Optional[AgentContext] = None):
         self._parent_conversation: LocalConversation | None = None
         # Map from user-friendly identifier to conversation
         self._sub_agents: dict[str, LocalConversation] = {}
         self._max_children: int = max_children
-
+        self._agent_context: Optional[AgentContext] = agent_context
     @property
     def parent_conversation(self) -> LocalConversation:
         """Get the parent conversation.
@@ -98,6 +100,7 @@ class DelegateExecutor(ToolExecutor):
             for agent_id in action.ids:
                 # Create a sub-agent with the specified ID
                 worker_agent = get_default_agent(
+                    agent_context=self._agent_context,
                     llm=parent_llm.model_copy(
                         update={"service_id": f"sub_agent_{agent_id}"}
                     ),

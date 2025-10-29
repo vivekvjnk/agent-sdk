@@ -1,5 +1,5 @@
 """Default preset configuration for OpenHands agents."""
-
+from typing import Optional
 from openhands.sdk import Agent
 from openhands.sdk.context.condenser import (
     LLMSummarizingCondenser,
@@ -10,6 +10,7 @@ from openhands.sdk.logger import get_logger
 from openhands.sdk.security.llm_analyzer import LLMSecurityAnalyzer
 from openhands.sdk.tool import Tool, register_tool
 
+from openhands.sdk import AgentContext
 
 logger = get_logger(__name__)
 
@@ -65,6 +66,7 @@ def get_default_condenser(llm: LLM) -> CondenserBase:
 
 def get_default_agent(
     llm: LLM,
+    agent_context:Optional[AgentContext]=None,
     cli_mode: bool = False,
     add_security_analyzer: bool = False,
 ) -> Agent:
@@ -74,6 +76,7 @@ def get_default_agent(
     )
     agent = Agent(
         llm=llm,
+        agent_context=agent_context,
         tools=tools,
         mcp_config={
             "mcpServers": {
