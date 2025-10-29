@@ -8,8 +8,18 @@ which then merges both analyses into a single consolidated report.
 """
 
 import os
+# Set few environment variables before starting the experiment
+os.environ["DEBUG"]="true"
+os.environ["LOG_LEVEL"] = "DEBUG"
+os.environ["LOG_TO_FILE"] = "true"
+os.environ["DEBUG_LLM"] = "true"
+
+workspace = "/home/pst/Documents/crazy_orca/agent_workspace/"
+os.chdir(workspace)
+
 
 from pydantic import SecretStr
+
 
 from openhands.sdk import (
     LLM,

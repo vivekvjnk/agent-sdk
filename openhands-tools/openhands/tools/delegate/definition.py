@@ -21,22 +21,68 @@ if TYPE_CHECKING:
 CommandLiteral = Literal["spawn", "delegate"]
 
 
+# class DelegateAction(Action):
+#     """Schema for delegation operations."""
+
+#     command: CommandLiteral = Field(
+#         description="The commands to run. Allowed options are: `spawn`, `delegate`."
+#     )
+#     ids: list[str] | None = Field(
+#         default=None,
+#         description="Required parameter of `spawn` command. "
+#         "List of identifiers to initialize sub-agents with.",
+#     )
+#     tasks: dict[str, str] | None = Field(
+#         default=None,
+#         description=(
+#             "Required parameter of `delegate` command. "
+#             "Dictionary mapping sub-agent identifiers to task descriptions."
+#         ),
+#     )
+
 class DelegateAction(Action):
     """Schema for delegation operations."""
 
     command: CommandLiteral = Field(
-        description="The commands to run. Allowed options are: `spawn`, `delegate`."
+        description=(
+            """The command to execute. Allowed options are: `spawn`, `delegate`.
+            **Examples:**
+            - `{"command": "spawn"}`
+            - `{"command": "delegate"}`
+            """
+        )
     )
+
     ids: list[str] | None = Field(
         default=None,
-        description="Required parameter of `spawn` command. "
-        "List of identifiers to initialize sub-agents with.",
+        description=(
+            """Required parameter for the `spawn` command.
+            List of unique string identifiers for sub-agents to initialize.
+            **Example:**
+            ```json
+            {"ids": ["research", "implementation", "testing"]}
+            ```
+            """
+        ),
     )
+
     tasks: dict[str, str] | None = Field(
         default=None,
         description=(
-            "Required parameter of `delegate` command. "
-            "Dictionary mapping sub-agent identifiers to task descriptions."
+            """
+            Required parameter for the `delegate` command.
+            Dictionary mapping sub-agent identifiers (keys) to task descriptions (values).
+            **Example:**
+            ```json
+            {
+            "tasks": {
+                "research": "Find best practices for async code",
+                "implementation": "Refactor the MyClass class",
+                "testing": "Write unit tests for new implementation"
+                } 
+            }
+            ```
+            """
         ),
     )
 

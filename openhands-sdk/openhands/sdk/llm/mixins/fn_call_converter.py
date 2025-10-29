@@ -708,9 +708,9 @@ def _extract_and_validate_params(
             elif param_name_to_type[param_name] == "array":
                 try:
                     param_value = json.loads(param_value)
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
                     raise FunctionCallValidationError(
-                        f"Parameter '{param_name}' is expected to be an array."
+                        f"Parameter '{param_name}' is expected to be an array. Received parameter value: {param_match.group(2)}. json decode error: {e}"
                     )
             else:
                 # string
