@@ -28,26 +28,15 @@ which then merges both analyses into a single consolidated report.
 """
 
 import os
-# Set few environment variables before starting the experiment
-os.environ["DEBUG"]="true"
-os.environ["LOG_LEVEL"] = "DEBUG"
-os.environ["LOG_TO_FILE"] = "true"
-os.environ["DEBUG_LLM"] = "true"
-
-workspace = "/home/pst/Documents/crazy_orca/architect_workspace/"
-os.chdir(workspace)
-
-
 from pydantic import SecretStr
 
-
 from openhands.sdk import (
+    get_logger,
     LLM,
     Agent,
     AgentContext,
     Conversation,
     Tool,
-    get_logger,
 )
 from openhands.sdk.tool import register_tool
 from openhands.tools.delegate import DelegateTool
@@ -64,6 +53,25 @@ from openhands.sdk.context import (
 
 from openhands.tools.preset.default import get_default_tools
 
+# Load skills 
+with open("examples/04_pst/persistent_memory_skill.md","r") as f:
+    persistent_memory_skill = f.read()
+
+with open("examples/04_pst/architect_with_persistence.md","r") as f:
+    architect_skill = f.read()
+
+with open("examples/04_pst/reader_with_persistence.md","r") as f:
+    reader_skill = f.read()
+
+architect_u_agent_instr = persistent_memory_skill + "\n\n"+ architect_skill
+reader_u_agent_instr =  persistent_memory_skill + "\n\n" + reader_skill
+
+# Content of the "persistent_memory" section in persistent memory skill should be filled by loading the information from the persistent memory file. Assumption is that each sub agent will be allocated with a dedicated workspace under the delegation agent workspace. Inside the workspace of each agent, persistent memory file will be stored.
+# Hence simply passing persistent memory file from the workspace will not serve the purpose. Implementation has to be done from inside Agent SDK. We will pass personas from here. Agent memory needs to be integrated deep inside. Look at the microagent/skill implementation. It may have feature to read and load instructions during runtime.
+# Call .format() method over the agent instructions string to fill the "persistent_memory" section from where ever we fill the content
+
+workspace = "/home/pst/Documents/crazy_orca/architect_workspace/"
+os.chdir(workspace)
 
 logger = get_logger(__name__)
 
@@ -79,20 +87,8 @@ llm = LLM(
     usage_id="agent",
 )
 
-# Load skills 
-with open("examples/04_pst/reader_no_notebook.md","r") as f:
-    reader_u_agent_instr = f.read()
-
-with open("examples/04_pst/architect.md","r") as f:
-    architect_u_agent_instr = f.read()
-
-
-# Set custom work directory 
-workspace = "/home/pst/Documents/crazy_orca/agent_workspace/"
-os.chdir(workspace)
 
 cwd = os.getcwd()
-
 
 reader_agent_context = AgentContext(
     skills=[
@@ -121,8 +117,8 @@ tools.extend(
 main_agent_context = AgentContext(
     skills=[
         Skill(
-            name="architect.md",
-            content=reader_u_agent_instr,
+            name="Principal Architect",
+            content=architect_u_agent_instr,
             trigger=KeywordTrigger(
                 keywords=["architect"]),
         ),
@@ -146,21 +142,20 @@ conversation = Conversation(
 
 
 task_message = (
-    "Forget about coding. Let's switch to travel planning. "
-    "Let's plan a trip to London. I have two issues I need to solve: "
-    "Lodging: what are the best areas to stay at while keeping budget in mind? "
-    "Activities: what are the top 5 must-see attractions and hidden gems? "
-    "Please use the delegation tools to handle these two tasks in parallel. "
-    "Make sure the sub-agents use their own knowledge "
-    "and dont rely on internet access. "
-    "They should keep it short. After getting the results, merge both analyses "
-    "into a single consolidated report.\n\n"
+"""
+Build 64v, 2kw stackable li ion BMS.
+As a hardware architect do a thorough research, then convert the above requirement into a hardware design document. Collect all the necessary data. With this HDD, a beginner hardware engineer should be able to build the system.
+
+Make sure you create an HDD document in markdown format with collected information under workspace directory, prepare proper folder structure if required, and organize information such that further development is structured and and scientific.
+
+Every artifact you collect during research should be stored in the workspace under research/docs directory(make it if not present)
+"""
 )
 conversation.send_message(task_message)
 conversation.run()
 
-conversation.send_message(
-    "Ask the lodging sub-agent what it thinks about Covent Garden."
-)
-conversation.run()
+# conversation.send_message(
+#     "Ask the lodging sub-agent what it thinks about Covent Garden."
+# )
+# conversation.run()
 
