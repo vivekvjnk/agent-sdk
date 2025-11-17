@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal
+from typing import Self
 
 from pydantic import Field
 from textwrap import shorten
@@ -373,28 +374,26 @@ Designed as an intelligent extension of the Unix `cat` command.
 * **If you need information across >10 pages:** Make multiple sequential tool calls, each retrieving ≤10 pages.
 """
 
-cos_tool = ToolDefinition(
-    name="cat_on_steroids",
-    description=TOOL_DESCRIPTION,
-    action_type=CatOnSteroidsAction,
-    observation_type=CatOnSteroidsObservation,
-)
 
 
 class CatOnSteroidsTool(ToolDefinition[CatOnSteroidsAction, CatOnSteroidsObservation]):
     @classmethod
-    def create(cls, conv_state: "ConversationState") -> Sequence["CatOnSteroidsTool"]:
+    def create(cls, conv_state: "ConversationState") -> Sequence[Self]:
         from openhands.tools.cat_on_steroids.impl import CatOnSteroidsExecutor
 
         executor = CatOnSteroidsExecutor()
-
         return [
             cls(
-                name=cos_tool.name,
+                name="CatOnSteroids",
                 description=TOOL_DESCRIPTION,
                 action_type=CatOnSteroidsAction,
                 observation_type=CatOnSteroidsObservation,
-                annotations=cos_tool.annotations,
                 executor=executor,
+                annotations=ToolAnnotations(
+                    readOnlyHint=False,
+                    destructiveHint=False,
+                    idempotentHint=True,
+                    openWorldHint=False,
+                ),
             )
         ]

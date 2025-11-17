@@ -3,6 +3,9 @@ import yaml
 from openhands.tools.cat_on_steroids.impl import CatOnSteroidsExecutor, _DOC_CACHE
 from openhands.tools.cat_on_steroids.definition import CatOnSteroidsAction
 from openhands.tools.cat_on_steroids.preprocessor import DocumentPreprocessor
+from openhands.tools.cat_on_steroids.create_dummy_pdf import create_dummy_pdf
+from pathlib import Path
+import os
 
 
 @pytest.fixture(autouse=True)
@@ -12,9 +15,14 @@ def clear_cache():
     yield
     _DOC_CACHE.clear()
 
+@pytest.fixture
+def dummy_pdf(tmp_path):
+    pdf_path = tmp_path / "test_doc.pdf"
+    create_dummy_pdf(str(pdf_path))
+    return pdf_path
 
-def test_view_mode_returns_document_metadata():
-    doc_path = "stm32f405_ref_manual.pdf"
+def test_view_mode_returns_document_metadata(dummy_pdf):
+    doc_path = str(dummy_pdf)
     processed_doc = DocumentPreprocessor(doc_path=doc_path)
     _DOC_CACHE[doc_path] = processed_doc
 
@@ -29,18 +37,18 @@ def test_view_mode_returns_document_metadata():
     # assert obs.doc_metadata["pdf_metadata"] == processed_doc.doc_metadata
 
 
-def test_search_level_1_returns_metadata_summary():
-    doc_path = "stm32f405_ref_manual.pdf"
+def test_search_level_1_returns_metadata_summary(dummy_pdf):
+    doc_path = str(dummy_pdf)
     processed_doc = DocumentPreprocessor(doc_path=doc_path)
     _DOC_CACHE[doc_path] = processed_doc
 
     ex = CatOnSteroidsExecutor()
     action = CatOnSteroidsAction(
-        doc_path=doc_path, search_pattern="memory map", is_regex=False, search_level=1
+        doc_path=doc_path, search_pattern="memory map", search_level="surface"
     )
     obs = ex(action)
     with open("test_level_1.yaml","w") as f:
-        yaml.safe_dump(obs.to_llm_content,f)
+        yaml.safe_dump([tc.text for tc in obs.to_llm_content],f)
     # Two pages each contain "foo"
     # assert obs.total_results == 2
     # assert len(obs.metadata_summary) == 2
@@ -49,8 +57,8 @@ def test_search_level_1_returns_metadata_summary():
     # assert any("Page 2" in s or "page 2" in s for s in obs.metadata_summary)
 
 
-def test_search_level_2_respects_n_results_limit():
-    doc_path = "stm32f405_ref_manual.pdf"
+def test_search_level_2_respects_n_results_limit(dummy_pdf):
+    doc_path = str(dummy_pdf)
     processed_doc = DocumentPreprocessor(doc_path=doc_path)
     _DOC_CACHE[doc_path] = processed_doc
 
@@ -58,18 +66,18 @@ def test_search_level_2_respects_n_results_limit():
 
     # Request level 2 but limit to 1 result
     action = CatOnSteroidsAction(
-        doc_path=doc_path, search_pattern="memory map", is_regex=False, search_level=2, n_results=1
+        doc_path=doc_path, search_pattern="memory map", search_level="deep", n_results=1
     )
     obs = ex(action)
     
     with open("test_level_2.yaml","w") as f:
-        yaml.safe_dump(obs.to_llm_content,f)
+        yaml.safe_dump([tc.text for tc in obs.to_llm_content],f)
     # assert obs.total_results == 2
     # assert len(obs.content_results) == 1
     # assert "page_number" in first and "page_content" in first
 
 
-if __name__ == "__main__":
-    # test_view_mode_returns_document_metadata()
-    # test_search_level_1_returns_metadata_summary()
-    test_search_level_2_respects_n_results_limit()
+# if __name__ == "__main__":
+#     # test_view_mode_returns_document_metadata()
+#     # test_search_level_1_returns_metadata_summary()
+#     test_search_level_2_respects_n_results_limit()

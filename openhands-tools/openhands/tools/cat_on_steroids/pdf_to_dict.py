@@ -82,7 +82,10 @@ def find_pdf_file(search_root: Path, patterns: Optional[List[str]] = None) -> Op
 
     candidates = []
     for pat in patterns:
-        candidates.extend(search_root.rglob(pat))
+        if Path(patterns[0]).is_absolute() and Path(patterns[0]).is_file():
+            return Path(patterns[0])
+        else:
+            candidates.extend(search_root.rglob(pat))
 
     if not candidates:
         # fallback to any PDF in the tree
@@ -202,7 +205,7 @@ def sample_page_mapping(pages: List[Dict[str, Any]], start: int = 1, end: int = 
 
 
 def save_page_index_json(doc_metadata: Dict[str, Any], pages: List[Dict[str, Any]],
-                         toc: List[List[Any]],full_text, out_file: str = "pymupdf_page_index.json") -> Path:
+                         toc: List[List[Any]], full_text: str, pdf_filename: str) -> Path:
     """
     Saves extracted PDF summary (metadata + TOC + page info) to JSON.
 
@@ -210,20 +213,27 @@ def save_page_index_json(doc_metadata: Dict[str, Any], pages: List[Dict[str, Any
         doc_metadata: Document metadata dictionary.
         pages: List of page dictionaries.
         toc: List of TOC entries.
-        out_file: Output JSON filename.
+        full_text: Full text extracted from the PDF.
+        pdf_filename: The original filename of the PDF to derive the output JSON filename.
 
     Returns:
         Path to the saved JSON file.
     """
+    storage_dir = Path("processed_pdfs_data")
+    storage_dir.mkdir(exist_ok=True)  # Create the directory if it doesn't exist
+
+    json_filename = f"{Path(pdf_filename).stem}.json"
+    out_path = storage_dir / json_filename
+
     out = {
-        "full_text":full_text,
+        "full_text": full_text,
         "document_metadata": doc_metadata,
         "page_count": len(pages),
         "toc": toc,
         "pages": [
             {
                 "page_number": p["page_number"],
-                "page_indices":p["page_indices"],
+                "page_indices": p["page_indices"],
                 "page_meta": p["page_meta"],
                 "toc_details": p["toc_details"],
                 "page_content": (p["page_content"] or "")
@@ -231,7 +241,6 @@ def save_page_index_json(doc_metadata: Dict[str, Any], pages: List[Dict[str, Any
             for p in pages
         ]
     }
-    out_path = Path(out_file)
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(out, f, indent=2, ensure_ascii=False)
     return out_path.resolve()
@@ -270,7 +279,7 @@ def process_pdf_reference_manual(patterns=["*STM32*F405*.pdf"]):
     print("\nSample page-to-TOC mapping (first 6 pages):")
     sample_page_mapping(pages, 1, 6)
 
-    out_path = save_page_index_json(doc_metadata, pages, toc,full_text)
+    out_path = save_page_index_json(doc_metadata, pages, toc, full_text, pdf_path.name)
     print(f"\nSaved summary JSON to: {out_path}")
     return {"metadata":doc_metadata,"toc":toc,"pages":pages,"full_text":full_text,"page_count":len(pages)}
 
