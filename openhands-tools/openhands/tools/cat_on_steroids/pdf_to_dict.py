@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from pprint import pformat
 import bisect
+from openhands.tools.cat_on_steroids.sanitize_utf8 import sanitize_utf8
 
 def get_toc_for_page(toc_list: list, page_number: int) -> list:
     """
@@ -122,23 +123,23 @@ def extract_page_data(doc) -> List[Dict[str, Any]]:
     Returns:
         List of dictionaries containing page details.
     """
-    def sanitize_utf8(text: str) -> str:
-        """
-        Ensures text contains only valid UTF-8 characters.
-        Replaces invalid characters with a placeholder.
-        """
-        if isinstance(text, bytes):
-            # If we receive bytes, decode with error handling
-            return text.decode('utf-8', errors='replace')
+    # def sanitize_utf8(text: str) -> str:
+    #     """
+    #     Ensures text contains only valid UTF-8 characters.
+    #     Replaces invalid characters with a placeholder.
+    #     """
+    #     if isinstance(text, bytes):
+    #         # If we receive bytes, decode with error handling
+    #         return text.decode('utf-8', errors='replace')
         
-        # If it's already a string, encode and decode to catch any issues
-        try:
-            # This will catch any surrogate pairs or invalid Unicode
-            text.encode('utf-8')
-            return text
-        except UnicodeEncodeError:
-            # Replace invalid characters with the Unicode replacement character
-            return text.encode('utf-8', errors='replace').decode('utf-8')
+    #     # If it's already a string, encode and decode to catch any issues
+    #     try:
+    #         # This will catch any surrogate pairs or invalid Unicode
+    #         text.encode('utf-8')
+    #         return text
+    #     except UnicodeEncodeError:
+    #         # Replace invalid characters with the Unicode replacement character
+    #         return text.encode('utf-8', errors='replace').decode('utf-8')
     
     pages = []
     full_text = ""
@@ -246,7 +247,7 @@ def save_page_index_json(doc_metadata: Dict[str, Any], pages: List[Dict[str, Any
     return out_path.resolve()
 
 
-def process_pdf_reference_manual(patterns=["*STM32*F405*.pdf"]):
+def process_pdf_reference_manual(patterns):
     """
     Main orchestrator function that:
     - Finds PDF in the working directory tree

@@ -166,7 +166,7 @@ class CatOnSteroidsExecutor(
 
 
 
-    def __call__(self, action: CatOnSteroidsAction) -> CatOnSteroidsObservation:
+    def __call__(self, action: CatOnSteroidsAction,conv) -> CatOnSteroidsObservation:
         try:
             preprocessor = self._get_preprocessor(action.doc_path)
         except Exception as e:

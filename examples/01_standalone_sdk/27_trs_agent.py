@@ -46,7 +46,7 @@ with open("examples/01_standalone_sdk/trs_prompt.md","r") as f:
     trs_agent_prompt = f.read()
 
 # set workspace directory outside current project
-workspace = "/home/pst/Documents/crazy_orca/agent_workspace/"
+workspace = "/home/pst/Documents/crazy_orca/architect_workspace/"
 os.chdir(workspace)
 
 cwd = os.getcwd()
@@ -70,6 +70,7 @@ agent_context = AgentContext(
         Skill(
             name="architect.md",
             content=architect_skill,
+            trigger=None
         ),
     ],
     system_message_suffix="",

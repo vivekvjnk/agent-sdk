@@ -16,6 +16,8 @@ from openhands.sdk.tool import (
     Action,
     Observation,
     ToolDefinition,
+    ToolAnnotations,
+ 
 )
 
 
