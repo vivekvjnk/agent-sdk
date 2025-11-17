@@ -33,7 +33,7 @@ class CatOnSteroidsAction(Action):
         default=None, description="The keyword or regex pattern to search for in file contents. **NOTE: search is CASE SENSITIVE**"
     )
     search_level: Literal["surface", "deep"] = Field(
-        default=1,
+        default="surface",
         description=(
             "surface: Returns only metadata (page, section, count) for an overview. All matches are returned."
             "deep: Returns the complete content (dictionary format) of the top N results."
