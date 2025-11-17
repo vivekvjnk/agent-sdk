@@ -420,8 +420,9 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
 
         # 2) choose function-calling strategy
         use_native_fc = self.is_function_calling_active()
+        logger.debug(f"LLM.completion: use_native_fc={use_native_fc}")
+        
         original_fncall_msgs = copy.deepcopy(formatted_messages)
-
         # Convert Tool objects to ChatCompletionToolParam once here
         cc_tools: list[ChatCompletionToolParam] = []
         if tools:
@@ -448,7 +449,7 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
         has_tools_flag = bool(cc_tools) and use_native_fc
         # Behavior-preserving: delegate to select_chat_options
         call_kwargs = select_chat_options(self, kwargs, has_tools=has_tools_flag)
-
+        logger.debug(f"LLM.completion: kwargs.max_completion_tokens={kwargs.get("max_completion_tokens")}\n call_kwargs.max_completion_tokens={call_kwargs.get("max_completion_tokens")}\nself.max_completion_tokens={self.max_output_tokens}")
         # 4) optional request logging context (kept small)
         assert self._telemetry is not None
         log_ctx = None
@@ -496,7 +497,8 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
 
         try:
             resp = _one_attempt()
-
+            # log raw response
+            logger.debug(f"LLM raw response: {json.dumps(resp.model_dump(), indent=2)}")
             # Convert the first choice to an OpenHands Message
             first_choice = resp["choices"][0]
             message = Message.from_llm_chat_message(first_choice["message"])
@@ -605,6 +607,45 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
                         seed=self.seed,
                         **final_kwargs,
                     )
+                    # -----------------------------
+                    # Detect MALFORMED_FUNCTION_CALL in Responses API return and trigger retry
+                    try:
+                        resp_dict = None
+                        if hasattr(ret, "model_dump"):
+                            resp_dict = ret.model_dump()
+                        elif isinstance(ret, dict):
+                            resp_dict = ret
+                        else:
+                            resp_dict = dict(ret) if hasattr(ret, "items") else None
+
+                        if isinstance(resp_dict, dict):
+                            # check 'candidates' (Gemini style) or top-level finishReason
+                            candidates = resp_dict.get("candidates") or []
+                            for cand in candidates:
+                                fr = cand.get("finishReason") or cand.get("finish_reason")
+                                fm = cand.get("finishMessage") or cand.get("finish_message")
+                                if fr and isinstance(fr, str) and fr.upper() == "MALFORMED_FUNCTION_CALL":
+                                    logger.warning(
+                                        "Responses API: detected MALFORMED_FUNCTION_CALL. Triggering blind retry. finishMessage: %s", fm
+                                    )
+                                    raise LLMNoResponseError(
+                                        f"Responses API signaled MALFORMED_FUNCTION_CALL: {fm}"
+                                    )
+
+                            top_fr = resp_dict.get("finishReason") or resp_dict.get("finish_reason")
+                            top_fm = resp_dict.get("finishMessage") or resp_dict.get("finish_message")
+                            if top_fr and isinstance(top_fr, str) and top_fr.upper() == "MALFORMED_FUNCTION_CALL":
+                                logger.warning(
+                                    "Responses API: detected top-level MALFORMED_FUNCTION_CALL. Triggering blind retry. finishMessage: %s", top_fm
+                                )
+                                raise LLMNoResponseError(
+                                    f"Responses API signaled MALFORMED_FUNCTION_CALL: {top_fm}"
+                                )
+                    except LLMNoResponseError:
+                        raise
+                    except Exception:
+                        logger.debug("Unable to inspect Responses API return for function-call diagnostics.", exc_info=True)
+                    # -----------------------------
                     assert isinstance(ret, ResponsesAPIResponse), (
                         f"Expected ResponsesAPIResponse, got {type(ret)}"
                     )
@@ -674,6 +715,53 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
                     messages=messages,
                     **kwargs,
                 )
+                logger.debug(f"Litellm completion raw response: {ret}")
+                # -----------------------------
+                # Detect provider-side MALFORMED_FUNCTION_CALL (Gemini / Responses raw candidates)
+                # If detected, raise a retryable exception so retry_decorator triggers a blind retry.
+                try:
+                    # ModelResponse may provide a model_dump() or behave like a dict
+                    data_dict = None
+                    if hasattr(ret, "model_dump"):
+                        data_dict = ret.model_dump()
+                    elif isinstance(ret, dict):
+                        data_dict = ret
+                    else:
+                        # Best-effort conversion; if it fails, continue without detection
+                        data_dict = dict(ret) if hasattr(ret, "items") else None
+
+                    if isinstance(data_dict, dict):
+                        # 1) Gemini style: inspect 'candidates' entries
+                        candidates = data_dict.get("candidates") or []
+                        for cand in candidates:
+                            fr = cand.get("finishReason") or cand.get("finish_reason")
+                            fm = cand.get("finishMessage") or cand.get("finish_message")
+                            if fr and isinstance(fr, str) and fr.upper() == "MALFORMED_FUNCTION_CALL":
+                                logger.warning(
+                                    "Detected MALFORMED_FUNCTION_CALL in provider response. "
+                                    "Triggering blind retry. finishMessage: %s", fm
+                                )
+                                raise LLMNoResponseError(
+                                    f"Provider signaled MALFORMED_FUNCTION_CALL: {fm}"
+                                )
+                        # 2) Generic: top-level finishReason/finishMessage might exist
+                        top_fr = data_dict.get("finishReason") or data_dict.get("finish_reason")
+                        top_fm = data_dict.get("finishMessage") or data_dict.get("finish_message")
+                        if top_fr and isinstance(top_fr, str) and top_fr.upper() == "MALFORMED_FUNCTION_CALL":
+                            logger.warning(
+                                "Detected top-level MALFORMED_FUNCTION_CALL. Triggering blind retry. finishMessage: %s", top_fm
+                            )
+                            raise LLMNoResponseError(
+                                f"Provider signaled MALFORMED_FUNCTION_CALL: {top_fm}"
+                            )
+                except LLMNoResponseError:
+                    # Re-raise so outer retry machinery can catch it.
+                    raise
+                except Exception:
+                    # We don't want to break for any unexpected introspection errors.
+                    # Silently continue — subsequent behavior unchanged.
+                    logger.debug("Unable to introspect provider response for function-call diagnostics.", exc_info=True)
+                # -----------------------------
                 assert isinstance(ret, ModelResponse), (
                     f"Expected ModelResponse, got {type(ret)}"
                 )
@@ -771,7 +859,7 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
 
         # Function-calling capabilities
         feats = get_features(self.model)
-        logger.debug(f"Model features for {self.model}: {feats}")
+        logger.debug(f"Model features for {self.model}: {feats}\nNative tool calling support: {self.native_tool_calling}")
         self._function_calling_active = (
             self.native_tool_calling
             if self.native_tool_calling is not None
@@ -869,9 +957,8 @@ class LLM(BaseModel, RetryMixin, NonNativeToolCallingMixin):
                 "kimi-k2-instruct" in self.model and "groq" in self.model
             ):
                 message.force_string_serializer = True
-
         formatted_messages = [message.to_chat_dict() for message in messages]
-
+        logger.debug(f"LLM:format_messages_for_llm: Messages = {f"{json.dumps([m.model_dump() for m in messages], indent=2)}"}")
         return formatted_messages
 
     def format_messages_for_responses(

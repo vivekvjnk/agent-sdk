@@ -1,7 +1,9 @@
 import json
+from pydantic import ValidationError, Field
+from typing import Optional
 
-from pydantic import ValidationError
 
+from openhands.sdk.context.memory import  PersistentMemoryManager
 import openhands.sdk.security.risk as risk
 from openhands.sdk.agent.base import AgentBase
 from openhands.sdk.context.view import View
@@ -18,6 +20,7 @@ from openhands.sdk.event import (
     MessageEvent,
     ObservationEvent,
     SystemPromptEvent,
+    MemoryEvent
 )
 from openhands.sdk.event.condenser import Condensation, CondensationRequest
 from openhands.sdk.llm import (
@@ -44,6 +47,10 @@ logger = get_logger(__name__)
 
 
 class Agent(AgentBase):
+    persistent_memory_manager:Optional['PersistentMemoryManager'] | None = Field(
+        default=None,
+        description="Injectable instance of persistent_memory_manager",
+    )
     @property
     def _add_security_risk_prediction(self) -> bool:
         return isinstance(self.security_analyzer, LLMSecurityAnalyzer)
@@ -93,6 +100,10 @@ class Agent(AgentBase):
         # TODO(openhands): we should add test to test this init_state will actually
         # modify state in-place
 
+        # TODO: Create an object of MemoryEvent here. Make sure unique and dedicated file path is provided for each object of the Agent. Since there is no agent id or message id, lets use uuid in the init function of Agent to create a unique id for each Agent object.
+        # Done
+        # TODO: memory file path and file name could be passed as parameters to the Agent init function. If not provided, Agent takes the assumption that PersistentMemoryManager singleton is intialized before calling the Agent init function, hence no need to pass memory file path and name. 
+        
         # Validate security analyzer configuration once during initialization
         if self._add_security_risk_prediction and isinstance(
             state.confirmation_policy, NeverConfirm
@@ -171,16 +182,38 @@ class Agent(AgentBase):
             llm_convertible_events = [
                 e for e in state.events if isinstance(e, LLMConvertibleEvent)
             ]
+        # add a conditional branch here to integrate memory file
+        # Check for the memory flag, and if set, add the memory file contents as the 3rd last message. Make sure to remove previous memory file contents if any.
+        # Also ensure last 2 messages are pushed forward as memory file content is added before them.
+        # Add condition to check if memory file content exceed token limit, if yes log warning and skip adding memory file content.
+        # Refer condenser implementation before designing memory file integration. We will follow similar design pattern.
+        # We need to create a MemoryEvent class in event module to represent memory file contents as an event. This has to be inherited from LLMConvertibleEvent.The class should've an interface to update the content of the MemoryEvent. The interface should read the memory file from disk and update the content attribute of the MemoryEvent.
+        # why dont we make persistent memory as a dedicated tool? Instead of using file editor tool to write into memory file, we can create a dedicated persistent memory tool that handles writing into the memory file. MemoryEvent will handle reading of the memory file automatically when it is created and used.
 
+        # Update the memory_event content
+        if self.persistent_memory_manager:
+            if (len(llm_convertible_events) >= 2):
+                self.persistent_memory_manager.reload_content()
+                # Remove previous memory event if any
+                llm_convertible_events = [
+                    e for e in llm_convertible_events if not isinstance(e, MemoryEvent)
+                ]
+                # Insert memory event as the 3rd last message
+                llm_convertible_events.insert(-2, MemoryEvent(content=self.persistent_memory_manager.get_content()))
+            else:
+                logger.info("Not enough messages to insert memory event.")
+        else:
+            logger.warning("Memory file integration skipped: PersistentMemoryManager not provided to Agent")
+        
         # Get LLM Response (Action)
         _messages = LLMConvertibleEvent.events_to_messages(llm_convertible_events)
         logger.debug(
             "Sending messages to LLM: "
-            f"{json.dumps([m.model_dump() for m in _messages[1:]], indent=2)}"
+            f"{json.dumps([m.model_dump() for m in _messages], indent=2)}"
         )
-
         try:
             if self.llm.uses_responses_api():
+                logger.debug("Using LLM responses endpoint")
                 llm_response = self.llm.responses(
                     messages=_messages,
                     tools=list(self.tools_map.values()),
@@ -190,6 +223,7 @@ class Agent(AgentBase):
                     metadata=self.llm.metadata,
                 )
             else:
+                logger.debug("Using LLM completion endpoint")
                 llm_response = self.llm.completion(
                     messages=_messages,
                     tools=list(self.tools_map.values()),
@@ -266,7 +300,7 @@ class Agent(AgentBase):
                 self._execute_actions(conversation, action_events, on_event)
 
         else:
-            logger.info("LLM produced a message response - awaits user input")
+            logger.info(f"LLM produced a message response - awaits user input\nMessage: {llm_response}")
             state.agent_status = AgentExecutionStatus.FINISHED
             msg_event = MessageEvent(
                 source="agent",

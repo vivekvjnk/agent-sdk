@@ -105,7 +105,8 @@ class AgentBase(DiscriminatedUnionMixin, ABC):
             }
         ],
     )
-    system_prompt_filename: str = Field(default="system_prompt.j2")
+    # system_prompt_filename: str = Field(default="system_prompt.j2")
+    system_prompt_filename: str = Field(default="system_prompt_memory.j2")
     system_prompt_kwargs: dict[str, object] = Field(
         default_factory=dict,
         description="Optional kwargs to pass to the system prompt Jinja2 template.",

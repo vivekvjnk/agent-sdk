@@ -44,29 +44,16 @@ from openhands.sdk.context.skills.trigger import (
 )
 from openhands.sdk.tool import register_tool
 from openhands.tools.cat_on_steroids import CatOnSteroidsTool
-from openhands.tools.delegate import DelegateTool
+from openhands.tools.memory import PersistentMemoryTool
 from openhands.tools.preset.default import get_default_tools
 
-# Load skills
-with open("examples/04_pst/persistent_memory_skill.md", "r") as f:
-    persistent_memory_skill = f.read()
 
 with open("examples/04_pst/architect_with_persistence.md","r") as f:
     architect_skill = f.read()
 
-with open("examples/04_pst/reader_with_persistence.md","r") as f:
-    reader_skill = f.read()
 
-# architect_u_agent_instr = persistent_memory_skill + "\n\n" + architect_skill
+architect_u_agent_instr =  architect_skill
 
-architect_u_agent_instr = persistent_memory_skill + "\n\n" + architect_skill
-reader_u_agent_instr = persistent_memory_skill + "\n\n" + reader_skill
-# architect_u_agent_instr = ""
-# reader_u_agent_instr = ""
-# Content of the "persistent_memory" section in persistent memory skill should be filled by loading the information from the persistent memory file. Assumption is that each sub agent will be allocated with a dedicated workspace under the delegation agent workspace. Inside the workspace of each agent, persistent memory file will be stored.
-# Hence simply passing persistent memory file from the workspace will not serve the purpose. Implementation has to be done from inside Agent SDK. We will pass personas from here. Agent memory needs to be integrated deep inside. Look at the microagent/skill implementation. It may have feature to read and load instructions during runtime.
-# Call .format() method over the agent instructions string to fill the "persistent_memory" section from where ever we fill the content
-# In one agent iteration, agent skills are loaded only for the very first message. All other messages are continuation of the chat. Hence we need to device right method to attach the agent memory content to the message list.
 workspace = "/home/pst/Documents/crazy_orca/architect_workspace/"
 os.chdir(workspace)
 
@@ -87,30 +74,21 @@ llm = LLM(
 )
 
 
-
 cwd = os.getcwd()
 
-reader_agent_context = AgentContext(
-    skills=[
-        Skill(
-            name="reader.md",
-            content=reader_u_agent_instr,
-            trigger=None,
-        ),
-    ],
-    system_message_suffix="",
-    user_message_suffix="",
-)
-
+from openhands.sdk.context.memory import PersistentMemoryManager
+from pathlib import Path
+memory_manager = PersistentMemoryManager(base_path=Path(cwd),file_name="persistent_memory.yaml")
 
 # Setup tools
-register_tool("DelegateTool", DelegateTool)
 register_tool("CatOnSteroidsTool", CatOnSteroidsTool)
+register_tool("PersistentMemoryTool", PersistentMemoryTool)
+
 tools = get_default_tools(enable_browser=False)
 tools.extend(
         [
-            Tool(name="DelegateTool",params={"agent_context":reader_agent_context}),
-            Tool(name="CatOnSteroidsTool")
+            Tool(name="CatOnSteroidsTool"),
+            Tool(name="PersistentMemoryTool",params={"memory_manager":memory_manager}),
         ]
     )
 
@@ -130,7 +108,7 @@ main_agent_context = AgentContext(
 main_agent = Agent(
     llm=llm,
     tools=tools,
-    agent_context=main_agent_context
+    # agent_context=main_agent_context
 )
 
 conversation_id = uuid.uuid4()
@@ -148,19 +126,36 @@ conversation = Conversation(
 
 task_message = (
 """
-Build 64v, 2kw stackable li ion BMS.
-As a hardware architect do a thorough research, then convert the above requirement into a hardware design document. Collect all the necessary data. With this HDD, a beginner hardware engineer should be able to build the system.
+Build a 64 V, 2 kW stackable Li-ion Battery Management System (BMS).
 
-Make sure you create an HDD document in markdown format with collected information under workspace directory, prepare proper folder structure if required, and organize information such that further development is structured and and scientific.
+As a hardware architect:
+1. Perform a comprehensive technical study covering all aspects of such a system — 
+   cell chemistry, series/parallel configuration, current rating, efficiency targets, 
+   balancing topology, protection circuitry, sensing, communication, and thermal design.
+2. Summarize your findings and decisions into a structured **Hardware Design Document (HDD)** 
+   in Markdown format. Save it under the `workspace/` directory.
+3. Organize any collected research data, datasheets, reference designs, and notes under 
+   `workspace/research/docs/` (create the directory if it does not exist).
+4. The final HDD should be detailed and scientifically structured so that 
+   a beginner hardware engineer could reproduce the system from it.
+5. Structure your workflow methodically:
+   - Begin by identifying key design challenges and performance goals.
+   - Gather supporting data, standards, and reference architectures.
+   - Derive your own design choices through reasoning and justification.
+   - Summarize your progress regularly so the entire design process remains traceable.
 
-Every artifact you collect during research should be stored in the workspace under research/docs directory(make it if not present)
+**Expected outcome:**
+A well-organized workspace containing:
+- A complete, self-contained `Hardware_Design_Document.md` describing the full BMS design.
+- Supporting technical resources under `workspace/research/docs/`.
+- A clear and logical flow of reasoning visible through the artifacts created during the process.
+
+**Evaluation criteria (for internal validation):**
+- Clarity and completeness of the hardware design description.
+- Correctness of engineering reasoning and data consistency.
+- Evidence of progressive refinement (each phase builds on the previous).
+- Document structure suitable for continuation by another engineer.
 """
 )
 conversation.send_message(task_message)
 conversation.run()
-
-# conversation.send_message(
-#     "Ask the lodging sub-agent what it thinks about Covent Garden."
-# )
-# conversation.run()
-

@@ -137,7 +137,7 @@ def setup_logging(
     if to_file:
         os.makedirs(directory, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        log_filename = f"app-{timestamp}.log"
+        log_filename = f"agent-{timestamp}.log"
         
         fh = TimedRotatingFileHandler(
             os.path.join(directory, log_filename),
