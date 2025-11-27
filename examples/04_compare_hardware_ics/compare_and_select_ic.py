@@ -15,7 +15,7 @@ from openhands.sdk.context import Skill
 from openhands.sdk.context.condenser import LLMSummarizingCondenser
 from openhands.sdk.tool import Tool, register_tool
 from openhands.tools.cat_on_steroids import CatOnSteroidsTool
-from openhands.tools.execute_bash import BashTool
+from openhands.tools.terminal import TerminalTool
 from openhands.tools.file_editor import FileEditorTool
 
 
@@ -38,22 +38,22 @@ llm = LLM(
 
 
 # set workspace directory outside current project
-workspace = "../workspace/"
-os.chdir(workspace)
-with open("skills/component_selector_skill.md") as f:
+with open("examples/04_compare_hardware_ics/skills/component_selector_skill.md") as f:
     component_selector_skill = f.read()
+workspace = "workspace/"
+os.chdir(workspace)
 
 
 cwd = os.getcwd()
 print(f"Current working directory: {cwd}")
 
-register_tool("BashTool", BashTool)
+register_tool("TerminalTool", TerminalTool)
 register_tool("CatOnSteroidsTool", CatOnSteroidsTool)
 register_tool("FileEditorTool", FileEditorTool)
 
 tools = [
     Tool(name="CatOnSteroidsTool"),
-    Tool(name="BashTool"),
+    Tool(name="TerminalTool"),
     Tool(name="FileEditorTool"),
 ]
 
@@ -69,7 +69,7 @@ agent_context = AgentContext(
 )
 
 condenser = LLMSummarizingCondenser(
-    keep_first=6, kind="LLMSummarizingCondenser", max_size=30, llm=llm
+    keep_first=6, kind="LLMSummarizingCondenser", max_size=90, llm=llm
 )  # No condenser for now
 # Agent
 agent = Agent(llm=llm, tools=tools, agent_context=agent_context, condenser=condenser)

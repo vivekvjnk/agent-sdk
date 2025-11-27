@@ -1,17 +1,27 @@
 import ast
 import json
 import re
+import logging
+from typing import List, Any
 
+from openhands.sdk.logger import DEBUG, get_logger
 from openhands.sdk.tool import ToolExecutor
 from openhands.tools.cat_on_steroids.definition import (
     CatOnSteroidsAction,
     CatOnSteroidsObservation,
 )
 from openhands.tools.cat_on_steroids.preprocessor import (
-    DocumentPreprocessor,
-    PageDict,
+    DocumentPreprocessor
 )  # Assuming a path
+from openhands.tools.cat_on_steroids.utils import PageDict
 
+# Suppress browser-use logging for cleaner integration
+if DEBUG:
+    logging.getLogger("browser_use").setLevel(logging.DEBUG)
+else:
+    logging.getLogger("browser_use").setLevel(logging.WARNING)
+
+logger = get_logger(__name__)
 
 # Dictionary to cache parsed documents (performance optimization)
 _DOC_CACHE: dict[str, DocumentPreprocessor] = {}
@@ -85,7 +95,80 @@ class CatOnSteroidsExecutor(
             list[dict]: List of page contents for all requested pages.
         """
 
-        def expand_page_spec(spec: str) -> list[int]:
+        def expand_page_spec(spec: str) -> List[int]:
+            """Expand a single page, page range, or comma-separated list into a list of ints.
+            Also supports JSON-like list strings such as '["1-10"]' or '[1,2,3]'.
+            """
+            if spec is None:
+                return []
+            spec = spec.strip()
+            if not spec:
+                return []
+
+            # Handle bracketed JSON/CSV-like lists: '["1-10"]', "[1,2,3]"
+            if spec.startswith("[") and spec.endswith("]"):
+                parsed = None
+                try:
+                    parsed = json.loads(spec)
+                except Exception:
+                    # Fallback to ast.literal_eval for cases like "['1-10']" or single quotes
+                    try:
+                        parsed = ast.literal_eval(spec)
+                    except Exception as e:
+                        # If neither json.loads nor ast.literal_eval works, raise error.
+                        raise ValueError(f"Invalid list format: {spec}") from e
+
+                if isinstance(parsed, list):
+                    results: List[int] = []
+                    for item in parsed:
+                        # recurse for each element (handles numbers, ranges, quoted strings)
+                        # convert each item to str to unify types e.g. ints, "1-3", etc.
+                        results.extend(expand_page_spec(str(item)))
+                    return results
+                else:
+                    # Not a list after parsing; fall back to processing the string form
+                    spec = str(parsed).strip()
+
+            # Strip surrounding quotes if present: '"5"' or "'5'"
+            if (spec.startswith('"') and spec.endswith('"')) or (
+                spec.startswith("'") and spec.endswith("'")
+            ):
+                spec = spec[1:-1].strip()
+
+            if not spec:
+                return []
+
+            # Handle comma-separated lists (e.g., '1-3,5,7-8' or '1,2,3')
+            if "," in spec:
+                results: List[int] = []
+                for item in spec.split(","):
+                    item = item.strip()
+                    if not item:
+                        continue
+                    results.extend(expand_page_spec(item))
+                return results
+
+            # Handle range with optional spaces like "1-10" or "1 - 10"
+            if "-" in spec:
+                # Use regex to split by '-' with optional surrounding spaces (split only once)
+                parts = re.split(r"\s*-\s*", spec, maxsplit=1)
+                if len(parts) != 2 or not parts[0] or not parts[1]:
+                    raise ValueError(f"Invalid page range: {spec}")
+                try:
+                    start, end = map(int, parts)
+                    if start > end:
+                        start, end = end, start  # handle reversed input
+                    return list(range(start, end + 1))
+                except ValueError:
+                    raise ValueError(f"Invalid page range: {spec}")
+            else:
+                # Handle single page number
+                try:
+                    return [int(spec)]
+                except ValueError:
+                    raise ValueError(f"Invalid page number: {spec}")
+
+        def expand_page_spec_old(spec: str) -> list[int]:
             """Expand a single page, page range, or comma-separated list into a list of ints.
             Also supports JSON-like list strings such as '["1-10"]' or '[1,2,3]'.
             """
@@ -154,7 +237,7 @@ class CatOnSteroidsExecutor(
                     return [int(spec)]
                 except ValueError:
                     raise ValueError(f"Invalid page number: {spec}")
-
+        
         # Split comma-separated list, expand each spec, flatten all results
         all_pages = []
         for part in pages.split(","):
@@ -175,9 +258,12 @@ class CatOnSteroidsExecutor(
     def __call__(self, action: CatOnSteroidsAction, conv) -> CatOnSteroidsObservation:
         try:
             preprocessor = self._get_preprocessor(action.doc_path)
+            logger.info(f"Document cache: {preprocessor}")
         except Exception as e:
+            logger.error(f"Error loading document: {e}")
+            raise e
             return CatOnSteroidsObservation(
-                total_results=0, metadata_summary=[f"Error loading document: {e}"]
+                total_results=0, metadata_summary=[{"error":f"Error loading document: {e}"}]
             )
         # --- Page retrieval logic ---
         if action.pages:
@@ -188,12 +274,19 @@ class CatOnSteroidsExecutor(
             except IndexError:
                 return CatOnSteroidsObservation(
                     total_results=0,
-                    content_results=["Page number doesn't exist in the document"],
+                    content_results=[{"error":"Page number doesn't exist in the document"}],
                 )
 
-            return CatOnSteroidsObservation(
-                total_results=len(pages), content_results=pages
-            )
+            try:
+                observation = CatOnSteroidsObservation(
+                    total_results=len(pages), content_results=pages
+                )
+                # Validate serialization
+                observation.model_dump()
+                return observation
+            except Exception as e:
+                raise Exception(f"Error creating observation: {e}")
+                
         # --- Search Logic (FOS) ---
         elif action.search_pattern:
             all_matches = self._run_search(
@@ -208,9 +301,19 @@ class CatOnSteroidsExecutor(
                 #     f"Page {m['page_number']}(section level,title,page number): {m['toc_details']}\nContent:{m["page_content"][:100]}..."
                 #     for m in all_matches
                 # ]
-                return CatOnSteroidsObservation(
-                    total_results=total_count, metadata_summary=all_matches
-                )
+                # return CatOnSteroidsObservation(
+                #     total_results=total_count, metadata_summary=all_matches
+                # )
+                try:
+                    observation = CatOnSteroidsObservation(
+                        total_results=total_count, metadata_summary=all_matches
+                    )
+                    # Validate serialization
+                    observation.model_dump()
+                    return observation
+                except Exception as e:
+                    raise Exception(f"Error creating observation: {e}")
+                    
 
             # Level 2: Complete Content
             elif action.search_level == "deep":
@@ -218,9 +321,15 @@ class CatOnSteroidsExecutor(
                 limit = action.n_results if action.n_results != -1 else total_count
                 content_results = all_matches[:limit]
 
-                return CatOnSteroidsObservation(
-                    total_results=total_count, content_results=content_results
-                )
+                try:
+                    observation = CatOnSteroidsObservation(
+                        total_results=total_count, content_results=content_results
+                    )
+                    # Validate serialization
+                    observation.model_dump()
+                    return observation
+                except Exception as e:
+                    raise Exception(f"Error creating observation: {e}")
             else:
                 return CatOnSteroidsObservation(
                     total_results=0, content_results="action.search_level is missing!!"

@@ -7,7 +7,7 @@ from pprint import pformat
 from typing import Any
 
 from openhands.tools.cat_on_steroids.sanitize_utf8 import sanitize_utf8
-
+from openhands.tools.cat_on_steroids.utils import PageDict
 
 def get_toc_for_page(toc_list: list, page_number: int) -> list:
     """
@@ -55,14 +55,6 @@ def get_toc_for_page(toc_list: list, page_number: int) -> list:
 
 def ensure_pymupdf():
     """Ensures PyMuPDF (fitz) is installed and importable."""
-    try:
-        import fitz  # noqa
-    except Exception:
-        import subprocess
-
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "--quiet", "pymupdf"]
-        )
     import fitz
 
     return fitz
@@ -120,7 +112,7 @@ def load_document(pdf_path: Path, fitz_module) -> Any:
     return doc, doc.metadata
 
 
-def extract_page_data(doc) -> list[dict[str, Any]]:
+def extract_page_data(doc) -> dict[str, Any]:
     """
     Extracts plain text, structured blocks, and metadata for each page.
 
@@ -155,9 +147,9 @@ def extract_page_data(doc) -> list[dict[str, Any]]:
         page_number = i + 1
         rect = page.rect
         page_meta = {
-            "width": rect.width,
-            "height": rect.height,
-            "rotation": page.rotation,
+            # "width": rect.width,
+            # "height": rect.height,
+            # "rotation": page.rotation,
             "number": i + 1,
         }
 
@@ -175,13 +167,12 @@ def extract_page_data(doc) -> list[dict[str, Any]]:
             {
                 "page_number": page_number,
                 "page_indices": {"start_index": start_index, "end_index": end_index},
-                "page_meta": page_meta,
                 "page_content": page_content,
                 "page_blocks": page_dict_text,
                 "toc_details": None,
             }
         )
-    return pages, full_text
+    return {"pages":pages, "full_text":full_text}
 
 
 def map_toc_to_pages(pages: list[dict[str, Any]], toc: list[list[Any]]) -> None:
@@ -251,7 +242,7 @@ def save_page_index_json(
             {
                 "page_number": p["page_number"],
                 "page_indices": p["page_indices"],
-                "page_meta": p["page_meta"],
+                # "page_meta": p["page_meta"],
                 "toc_details": p["toc_details"],
                 "page_content": (p["page_content"] or ""),
             }
@@ -290,20 +281,20 @@ def process_pdf_reference_manual(patterns):
     toc = doc.get_toc()
     print(f"TOC entries: {len(toc)} (each entry: [level, title, page])")
 
-    pages, full_text = extract_page_data(doc)
-    map_toc_to_pages(pages, toc)
+    extracted_doc = extract_page_data(doc)
+    map_toc_to_pages(extracted_doc["pages"], toc)
 
     print("\nSample page-to-TOC mapping (first 6 pages):")
-    sample_page_mapping(pages, 1, 6)
+    sample_page_mapping(extracted_doc["pages"], 1, 6)
 
-    out_path = save_page_index_json(doc_metadata, pages, toc, full_text, pdf_path.name)
+    out_path = save_page_index_json(doc_metadata, extracted_doc["pages"], toc, extracted_doc["full_text"], pdf_path.name)
     print(f"\nSaved summary JSON to: {out_path}")
     return {
         "metadata": doc_metadata,
         "toc": toc,
-        "pages": pages,
-        "full_text": full_text,
-        "page_count": len(pages),
+        "pages": extracted_doc["pages"],
+        "full_text": extracted_doc["full_text"],
+        "page_count": len(extracted_doc["pages"]),
     }
 
 
@@ -340,7 +331,7 @@ def page_dict_to_string(page_dict: dict, mode: str = "prompt") -> str:
         # Extract fields with safety defaults
         page_number = page_dict.get("page_number", "?")
         page_indices = page_dict.get("page_indices", {})
-        meta = page_dict.get("page_meta", {})
+        # meta = page_dict.get("page_meta", {})
         toc = page_dict.get("toc_details", [])
         text = (page_dict.get("page_content") or "").strip()
 

@@ -5,10 +5,8 @@ from openhands.tools.cat_on_steroids.pdf_to_dict import (
     map_string_index_to_page,
     process_pdf_reference_manual,
 )
+from openhands.tools.cat_on_steroids.utils import PageDict
 
-
-# Define the structured data type
-PageDict = dict[str, Any]
 
 
 # Assume this class handles the PDF reading/parsing and stores the text/dicts
@@ -38,7 +36,7 @@ class DocumentPreprocessor:
     def doc_metadata(self):
         return self.processed_data["metadata"]
 
-    def get_page(self, page_number):
+    def get_page(self, page_number)-> PageDict:
         index = page_number - 1
         return self.processed_data["pages"][index]
 

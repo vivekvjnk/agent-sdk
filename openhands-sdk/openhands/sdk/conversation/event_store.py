@@ -91,7 +91,15 @@ class EventLog(EventsListBase):
             )
 
         path = self._path(self._length, event_id=evt_id)
-        self._fs.write(path, event.model_dump_json(exclude_none=True))
+        # Add code to debug model_dump_json failure. If it fails, raise error with all info about the event.
+        try:
+            json_str = event.model_dump_json()
+        except Exception as e:
+            raise ValueError(
+                f"Failed to serialize event with ID '{evt_id}': {e}. "
+                f"Event data: {event.model_dump()}"
+            ) from e
+        self._fs.write(path, json_str)
         self._idx_to_id[self._length] = evt_id
         self._id_to_idx[evt_id] = self._length
         self._length += 1
