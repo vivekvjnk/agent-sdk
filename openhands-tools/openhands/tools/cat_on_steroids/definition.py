@@ -8,7 +8,7 @@ from textwrap import shorten
 from openhands.sdk.llm import TextContent
 from openhands.sdk import get_logger
 from openhands.tools.cat_on_steroids.pdf_to_dict import page_dict_to_string
-
+from openhands.tools.cat_on_steroids.sanitize_utf8 import _SanitizingModelMixin
 if TYPE_CHECKING:
     from openhands.sdk.conversation.state import ConversationState
 
@@ -19,6 +19,7 @@ from openhands.sdk.tool import (
     ToolAnnotations,
  
 )
+
 
 
 logger = get_logger(__name__)
@@ -63,7 +64,7 @@ class CatOnSteroidsAction(Action):
     )
 
 
-class CatOnSteroidsObservation(Observation):
+class CatOnSteroidsObservation(_SanitizingModelMixin,Observation):
     """
     Observation containing structured document information or search results.
     """

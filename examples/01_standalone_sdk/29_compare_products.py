@@ -39,15 +39,13 @@ llm = LLM(
 )
 
 
-with open("examples/01_standalone_sdk/architect_skill.md","r") as f:
-    architect_skill = f.read()
-
-with open("examples/01_standalone_sdk/trs_prompt.md","r") as f:
-    trs_agent_prompt = f.read()
 
 # set workspace directory outside current project
 workspace = "/home/pst/Documents/crazy_orca/architect_workspace/"
 os.chdir(workspace)
+with open("skills/component_selector_skill.md","r") as f:
+    architect_skill = f.read()
+
 
 cwd = os.getcwd()
 print(f"Current working directory: {cwd}")
