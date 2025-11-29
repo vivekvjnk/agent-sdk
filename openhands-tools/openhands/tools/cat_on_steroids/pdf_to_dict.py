@@ -168,7 +168,6 @@ def extract_page_data(doc) -> dict[str, Any]:
                 "page_number": page_number,
                 "page_indices": {"start_index": start_index, "end_index": end_index},
                 "page_content": page_content,
-                "page_blocks": page_dict_text,
                 "toc_details": None,
             }
         )
