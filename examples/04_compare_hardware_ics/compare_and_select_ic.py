@@ -15,8 +15,8 @@ from openhands.sdk.context import Skill
 from openhands.sdk.context.condenser import LLMSummarizingCondenser
 from openhands.sdk.tool import Tool, register_tool
 from openhands.tools.cat_on_steroids import CatOnSteroidsTool
-from openhands.tools.terminal import TerminalTool
 from openhands.tools.file_editor import FileEditorTool
+from openhands.tools.terminal import TerminalTool
 
 
 # logger setup
