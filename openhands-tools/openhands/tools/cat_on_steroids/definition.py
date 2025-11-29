@@ -45,15 +45,20 @@ class CatOnSteroidsAction(Action):
     pages: str = Field(
         default="",
         description=(
-            "String specifying which pages to retrieve from the parsed document. "
-            "The **entire** specification string must be enclosed in single quotes (`'...'`). "
-            'Use double quotes (`"..."`) for any strings *inside* list structures.\n'
-            "Supported formats include:\n"
-            "- Single page: `'3'`\n"
-            "- List of pages: `'[1, 3, 5]'`\n"
-            "- Page range: `'2-5'`\n"
-            "- Mixed input (Recommended for ranges in a list): `'[\"1-3\", 5, 7]'`\n"
-            "If left empty, no specific page filtering is applied."
+            "Pages to retrieve: **MUST** be a valid JSON array (preferred and only supported format).\n\n"
+            "Requirements:\n"
+            '- Provide a JSON array. Example: ["46-48", "63-65"] or [1, 11, 12].\n'
+            '- Elements may be integers (e.g. 46) or a single range string (e.g. "46-48").\n'
+            "- Do NOT include comma-separated lists inside a single element; put each range/item as a separate array entry.\n"
+            "- Do NOT add extra outer quoting layers. The tool expects the array text exactly as JSON (no surrounding quotes).\n"
+            "- If empty, no page filtering is applied.\n\n"
+            "Examples (valid):\n"
+            '- ["1-3", "5"]\n'
+            "- [1, 11, 12, 27]\n\n"
+            "Examples (invalid):\n"
+            '- \'"["46-48", "63-65"]"\'  (extra outer quotes)\n'
+            "- ['46-48', 63]  (single quotes are invalid JSON)\n"
+            '- ["1-3,5"]  (comma inside element — use separate array elements)\n'
         ),
     )
 

@@ -90,6 +90,7 @@ conversation = Conversation(
 bms_ic_selection_prompt = """We are building a stackable multi-purpose BMS system of 64V and 2kW spec per each module. Primary objective of this design is to achieve High Voltage BMS capabilities by stacking multiple modules of the above given spec. At the same time these modules should work very well at any multiples of its stacking. ie if we stack 2 of them, we should get 128v system, 3 for 172v system etc. We should also be able to build low voltage solutions form the same architecture without major design changes.
 Essentially we are trying to build a platform for BMS solutions.
 From this perspective do a detailed comparison between each one of the provided BMS ICs(datasheets are saved in the workspace in PDF format). We are looking for the baseline BMS ic for our BMS platform.
+Please prepare a comprehensive comparison document in markdown format.
 """
 conversation.send_message(bms_ic_selection_prompt)
 

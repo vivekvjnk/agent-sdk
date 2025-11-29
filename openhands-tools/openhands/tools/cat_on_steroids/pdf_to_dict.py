@@ -1,13 +1,12 @@
 import bisect
 import json
 import os
-import sys
 from pathlib import Path
 from pprint import pformat
 from typing import Any
 
 from openhands.tools.cat_on_steroids.sanitize_utf8 import sanitize_utf8
-from openhands.tools.cat_on_steroids.utils import PageDict
+
 
 def get_toc_for_page(toc_list: list, page_number: int) -> list:
     """
@@ -60,9 +59,7 @@ def ensure_pymupdf():
     return fitz
 
 
-def find_pdf_file(
-    search_root: Path, patterns: list[str] | None = None
-) -> Path | None:
+def find_pdf_file(search_root: Path, patterns: list[str] | None = None) -> Path | None:
     """
     Searches recursively for a PDF file using provided glob patterns.
     Falls back to any PDF if none matches the given patterns.
@@ -171,7 +168,7 @@ def extract_page_data(doc) -> dict[str, Any]:
                 "toc_details": None,
             }
         )
-    return {"pages":pages, "full_text":full_text}
+    return {"pages": pages, "full_text": full_text}
 
 
 def map_toc_to_pages(pages: list[dict[str, Any]], toc: list[list[Any]]) -> None:
@@ -286,7 +283,13 @@ def process_pdf_reference_manual(patterns):
     print("\nSample page-to-TOC mapping (first 6 pages):")
     sample_page_mapping(extracted_doc["pages"], 1, 6)
 
-    out_path = save_page_index_json(doc_metadata, extracted_doc["pages"], toc, extracted_doc["full_text"], pdf_path.name)
+    out_path = save_page_index_json(
+        doc_metadata,
+        extracted_doc["pages"],
+        toc,
+        extracted_doc["full_text"],
+        pdf_path.name,
+    )
     print(f"\nSaved summary JSON to: {out_path}")
     return {
         "metadata": doc_metadata,

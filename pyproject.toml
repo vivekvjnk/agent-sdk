@@ -8,6 +8,7 @@ openhands-sdk = { workspace = true }
 openhands-tools = { workspace = true }
 openhands-workspace = { workspace = true }
 openhands-agent-server = { workspace = true }
+litellm = { git = "https://github.com/vivekvjnk/litellm", tag = "v0" }
 
 [dependency-groups]
 dev = [
