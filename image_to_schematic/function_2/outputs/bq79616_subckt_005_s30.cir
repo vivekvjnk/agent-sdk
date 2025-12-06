@@ -1,0 +1,54 @@
+* SPICE subcircuit for bq79616_subckt_005_s30.png
+
+* External Ports: USB2ANY_3.3V GND_ISO USB2ANY_TX_3.3 USB2ANY_RX_3.3 NFAULT_C CVDD_CO GND CVDD MCU_RX_PIN U2_OUTB_RX_CO
+.SUBCKT SUBCKT_bq79616_subckt_005_s30 USB2ANY_3.3V GND_ISO USB2ANY_TX_3.3 USB2ANY_RX_3.3 NFAULT_C CVDD_CO GND CVDD MCU_RX_PIN U2_OUTB_RX_CO
+
+* Components and Connections
+
+* IC U2: ISO7342CQDWRQ1 (Quad Digital Isolator)
+* Pin list: VCC1 GND1 INA INB OUTC OUTD EN1 GND1 GND2 EN2 IND INC OUTB OUTA GND2 VCC2
+XU2 USB2ANY_3.3V GND_ISO GND_ISO USB2ANY_TX_3.3 USB2ANY_RX_3.3 NFAULT_C USB2ANY_3.3V GND_ISO GND GND NF_J_NET U2_INC_TX_NET U2_OUTB_RX_CO CVDD_CO GND CVDD_CO ISO7342CQDWRQ1_stub
+
+* Capacitors
+C57 USB2ANY_3.3V GND_ISO 0.1uF
+C58 CVDD_CO GND 0.1uF
+C4 USB2ANY_3.3V GND 0.1uF
+
+* Resistors
+R123 USB2ANY_3.3V GND_ISO 100k
+R120 CVDD MCU_RX_PIN 100k
+R2 CVDD NF_J_NET 100k
+R119 MCU_RX_PIN U2_INC_TX_NET 100
+
+* Connectors (represented by their connections to other nets)
+* J1 (2-pin connector)
+* J1-1 to CVDD
+* J1-2 to GND
+* J2 (2-pin connector)
+* J2-1 to CVDD
+* J2-2 to GND
+* J21 (2-pin connector)
+* J21-1 to U2_OUTB_RX_CO (net from U2-OUTB)
+* J21-2 to MCU_RX_PIN
+* J18 (2-pin connector)
+* J18-1 to CVDD
+* J18-2 to CVDD_CO
+
+* J17 (10-pin connector - J17A and J17B are parts of it)
+* J17-1: NC_J17_1
+* J17-2: NC_J17_2
+* J17-3: NFAULT_C (via NFAULT net)
+* J17-4: USB2ANY_TX_3.3
+* J17-5: GND
+* J17-6: USB2ANY_3.3V
+* J17-7: MCU_RX_PIN
+* J17-8: USB2ANY_TX_3.3 (same net as J17-4)
+* J17-9: NC_J17_9
+* J17-10: USB2ANY_RX_3.3
+
+* IC U2 Stub Subcircuit Definition
+.SUBCKT ISO7342CQDWRQ1_stub VCC1 GND1 INA INB OUTC OUTD EN1 GND1_DUP GND2 EN2 IND INC OUTB OUTA GND2_DUP VCC2
+* Internal behavior intentionally omitted; to be filled by another agent.
+.ENDS ISO7342CQDWRQ1_stub
+
+.ENDS SUBCKT_bq79616_subckt_005_s30

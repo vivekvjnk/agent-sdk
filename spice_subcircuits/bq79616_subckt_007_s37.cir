@@ -1,0 +1,25 @@
+* Subcircuit for bq79616_subckt_007_s37.png - NPN Power Supply
+.SUBCKT SUBCKT_bq79616_subckt_007_s37 LDOIN NPNB PWR GND
+
+* Q1: NPN Transistor
+* Collector (3) connected to LDOIN
+* Base (1) connected to NPNB
+* Emitter (2) connected to common node between C1 and R3
+Q1 LDOIN NPNB NET_Q1_EMITTER NPN
+
+* C1: Capacitor 0.22uF
+* Connected between Q1 emitter/R3 and GND
+C1 NET_Q1_EMITTER GND 0.22uF
+
+* R3: Resistor 100 Ohm
+* Connected between Q1 emitter/C1 and R4
+R3 NET_Q1_EMITTER NET_R3_R4 100
+
+* R4: Resistor 200 Ohm
+* Connected between R3 and PWR
+R4 NET_R3_R4 PWR 200
+
+* Generic NPN BJT model (assuming default NPN model is sufficient)
+.MODEL NPN NPN
+
+.ENDS SUBCKT_bq79616_subckt_007_s37

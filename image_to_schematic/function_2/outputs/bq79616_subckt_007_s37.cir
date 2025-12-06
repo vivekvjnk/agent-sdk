@@ -1,0 +1,26 @@
+* Subcircuit for bq79616_subckt_007_s37.png - NPN Power Supply
+* Ports: LDOIN NPNB PWR GND
+
+.SUBCKT SUBCKT_bq79616_subckt_007_s37 LDOIN NPNB PWR GND
+
+* Components:
+* Q1: NPN Transistor
+* Collector (3) -> LDOIN
+* Base (1)      -> NPNB
+* Emitter (2)   -> N_Q1_EMITTER
+Q1 N_Q1_EMITTER NPNB LDOIN NPN_GENERIC
+
+* C1: Capacitor 0.22uF
+* Connected between Q1 emitter node and GND
+C1 N_Q1_EMITTER GND 0.22uF
+
+* R3: Resistor 100 Ohm
+* Connected between Q1 emitter node and N_R3_R4_JUNCTION
+R3 N_Q1_EMITTER N_R3_R4_JUNCTION 100
+
+* R4: Resistor 200 Ohm
+* Connected between N_R3_R4_JUNCTION and PWR
+R4 N_R3_R4_JUNCTION PWR 200
+
+.MODEL NPN_GENERIC NPN
+.ENDS SUBCKT_bq79616_subckt_007_s37

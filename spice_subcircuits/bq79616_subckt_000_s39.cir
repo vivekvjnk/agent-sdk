@@ -1,0 +1,8 @@
+* Subcircuit for bq79616_subckt_000_s39.png
+* This subcircuit primarily defines an interface for several nets.
+* All resistors (R21-R28) shown in the schematic are marked "DNP" (Do Not Populate)
+* and are therefore omitted from this SPICE netlist, representing open circuits.
+
+.SUBCKT SUBCKT_bq79616_subckt_000_s39 CB12 CB13 CB14 CB15 CB16 VC12 VC13 VC14 VC15 VC16
+* No internal components as all resistors are DNP.
+.ENDS SUBCKT_bq79616_subckt_000_s39

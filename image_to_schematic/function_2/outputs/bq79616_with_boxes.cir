@@ -1,0 +1,234 @@
+* SPICE subcircuit for bq79616_with_boxes.png
+
+.SUBCKT SUBCKT_bq79616_with_boxes \
+* Test Point Nets (from Test Points section)
+TSREF LDOIN NEG5V NPNB RX TX CVDD AVDD REFHP BAT DVDD BBP BBN NFAULT GND \
+* UART Communication Nets (from UART section)
+USB2ANY_3_3V USB2ANY_RX_3_3V USB2ANY_RX_5V USB2ANY_TX_3_3V USB2ANY_TX_5V \
+CVDD_CO RX_CO I2TX_U2 INC_U2 NFAULT_C_U2 FAULTn \
+* BBP/BBN Bus Bar & Current Sense Nets
+BBP_CELL BBN_CELL SRP_S SRN_S \
+* GPIO and NTC Circuit Nets
+PULLUP GPIO1_R GPIO2_R GPIO3_R GPIO4_R GPIO5_R GPIO6_R GPIO7_R GPIO8_R \
+* BQ79616 Cell and Balance Pins
+VC0 VC1 VC2 VC3 VC4 VC5 VC6 VC7 VC8 VC9 VC10 VC11 VC12 VC13 VC14 VC15 VC16 \
+CB0 CB1 CB2 CB3 CB4 CB5 CB6 CB7 CB8 CB9 CB10 CB11 CB12 CB13 CB14 CB15 CB16 \
+COMHP COMHN COMLP COMLN REFHM AVSS OVSS \
+PAD_U1
+
+* --- IC Stub Definitions ---
+
+* U1: BQ79616PAPQ1 Battery Monitor IC
+* Internal behavior intentionally omitted; to be filled by another agent.
+.SUBCKT U1_bq79616_stub \
+VC0 VC1 VC2 VC3 VC4 VC5 VC6 VC7 VC8 VC9 VC10 VC11 VC12 VC13 VC14 VC15 VC16 \
+CB0 CB1 CB2 CB3 CB4 CB5 CB6 CB7 CB8 CB9 CB10 CB11 CB12 CB13 CB14 CB15 CB16 \
+GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
+TSREF LDOIN NEG5V NPNB BAT CVDD AVDD DVDD BBP BBN \
+COMHP COMHN COMLP COMLN PAD REFHM AVSS OVSS RX TX NFAULT FAULT \
+GND
+
+* Dummy components to represent IC pins for connectivity. Using large resistors to simulate open connections.
+R_dummy_VC0 VC0 0 1G ; High impedance for unused pin
+R_dummy_VC1 VC1 0 1G
+R_dummy_VC2 VC2 0 1G
+R_dummy_VC3 VC3 0 1G
+R_dummy_VC4 VC4 0 1G
+R_dummy_VC5 VC5 0 1G
+R_dummy_VC6 VC6 0 1G
+R_dummy_VC7 VC7 0 1G
+R_dummy_VC8 VC8 0 1G
+R_dummy_VC9 VC9 0 1G
+R_dummy_VC10 VC10 0 1G
+R_dummy_VC11 VC11 0 1G
+R_dummy_VC12 VC12 0 1G
+R_dummy_VC13 VC13 0 1G
+R_dummy_VC14 VC14 0 1G
+R_dummy_VC15 VC15 0 1G
+R_dummy_VC16 VC16 0 1G
+R_dummy_CB0 CB0 0 1G
+R_dummy_CB1 CB1 0 1G
+R_dummy_CB2 CB2 0 1G
+R_dummy_CB3 CB3 0 1G
+R_dummy_CB4 CB4 0 1G
+R_dummy_CB5 CB5 0 1G
+R_dummy_CB6 CB6 0 1G
+R_dummy_CB7 CB7 0 1G
+R_dummy_CB8 CB8 0 1G
+R_dummy_CB9 CB9 0 1G
+R_dummy_CB10 CB10 0 1G
+R_dummy_CB11 CB11 0 1G
+R_dummy_CB12 CB12 0 1G
+R_dummy_CB13 CB13 0 1G
+R_dummy_CB14 CB14 0 1G
+R_dummy_CB15 CB15 0 1G
+R_dummy_CB16 CB16 0 1G
+R_dummy_GPIO1 GPIO1 0 1G
+R_dummy_GPIO2 GPIO2 0 1G
+R_dummy_GPIO3 GPIO3 0 1G
+R_dummy_GPIO4 GPIO4 0 1G
+R_dummy_GPIO5 GPIO5 0 1G
+R_dummy_GPIO6 GPIO6 0 1G
+R_dummy_GPIO7 GPIO7 0 1G
+R_dummy_GPIO8 GPIO8 0 1G
+R_dummy_TSREF TSREF 0 1G
+R_dummy_LDOIN LDOIN 0 1G
+R_dummy_NEG5V NEG5V 0 1G
+R_dummy_NPNB NPNB 0 1G
+R_dummy_BAT BAT 0 1G
+R_dummy_CVDD CVDD 0 1G
+R_dummy_AVDD AVDD 0 1G
+R_dummy_DVDD DVDD 0 1G
+R_dummy_BBP BBP 0 1G
+R_dummy_BBN BBN 0 1G
+R_dummy_COMHP COMHP 0 1G
+R_dummy_COMHN COMHN 0 1G
+R_dummy_COMLP COMLP 0 1G
+R_dummy_COMLN COMLN 0 1G
+R_dummy_PAD PAD 0 1G
+R_dummy_REFHM REFHM 0 1G
+R_dummy_AVSS AVSS 0 1G
+R_dummy_OVSS OVSS 0 1G
+R_dummy_RX RX 0 1G
+R_dummy_TX TX 0 1G
+R_dummy_NFAULT NFAULT 0 1G
+R_dummy_FAULT FAULT 0 1G
+R_dummy_GND GND 0 1G
+.ENDS U1_bq79616_stub
+
+* U2: ISO7342CQDWRQ1 Quad Channel Digital Isolator
+* Internal behavior intentionally omitted; to be filled by another agent.
+.SUBCKT U2_iso7342_stub \
+VCC1 GND1 INA INB INC IND EN1 \
+VCC2 GND2 OUTA OUTB OUTC OUTD EN2
+
+* Dummy components to represent IC pins for connectivity.
+R_dummy_U2_VCC1 VCC1 0 1G
+R_dummy_U2_GND1 GND1 0 1G
+R_dummy_U2_INA INA 0 1G
+R_dummy_U2_INB INB 0 1G
+R_dummy_U2_INC INC 0 1G
+R_dummy_U2_IND IND 0 1G
+R_dummy_U2_EN1 EN1 0 1G
+R_dummy_U2_VCC2 VCC2 0 1G
+R_dummy_U2_GND2 GND2 0 1G
+R_dummy_U2_OUTA OUTA 0 1G
+R_dummy_U2_OUTB OUTB 0 1G
+R_dummy_U2_OUTC OUTC 0 1G
+R_dummy_U2_OUTD OUTD 0 1G
+R_dummy_U2_EN2 EN2 0 1G
+.ENDS U2_iso7342_stub
+
+* --- Component Instantiation ---
+
+* U1: BQ79616PAPQ1 Battery Monitor IC
+XU1 \
+VC0 VC1 VC2 VC3 VC4 VC5 VC6 VC7 VC8 VC9 VC10 VC11 VC12 VC13 VC14 VC15 VC16 \
+CB0 CB1 CB2 CB3 CB4 CB5 CB6 CB7 CB8 CB9 CB10 CB11 CB12 CB13 CB14 CB15 CB16 \
+GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
+TSREF LDOIN NEG5V NPNB BAT CVDD AVDD DVDD BBP BBN \
+COMHP COMHN COMLP COMLN PAD_U1 REFHM AVSS OVSS RX TX NFAULT FAULTn \
+GND \
+U1_bq79616_stub
+* Note: Pin GND of BQ79616 (U1) is connected to main GND.
+
+* U2: ISO7342CQDWRQ1 Quad Channel Digital Isolator
+XU2 \
+USB2ANY_3_3V GND USB2ANY_RX_3_3V USB2ANY_RX_5V USB2ANY_TX_3_3V USB2ANY_TX_5V GND \
+CVDD_CO GND RX_CO I2TX_U2 INC_U2 NFAULT_C_U2 GND \
+U2_iso7342_stub
+* Note: EN1 and EN2 of U2 are connected to GND in the schematic.
+* Note: OUTC (pin 13) output is connected to net INC_U2.
+* Note: OUTD (pin 14) output is connected to net NFAULT_C_U2.
+* Note: I2TX_U2 is the net connected to OUTB (pin 12).
+
+* --- NPN Power Supply (Top Middle) ---
+Q1 LDOIN PWR_Q1 NPNB QNPN ; NPN transistor. Generic NPN model assumed.
+R3 PWR_Q1 NPNB 100
+R4 NPNB GND 200
+C1 PWR_Q1 GND 0.22uF
+* Net PWR_Q1 used for internal connection of Q1, R3, C1. PWR is used for R5.
+
+* --- Main IC Decoupling (around U1) ---
+* All decoupling caps are as close to the chip as possible.
+R5 PWR_U1 BBP 30.0 ; Net PWR_U1 for the power connection here
+C5 BBP GND 10nF
+C6 BBP GND 1uF
+C7 CVDD GND 4.7uF
+C8 AVDD GND 1uF
+C9 DVDD GND 1uF
+C2 TSREF GND 1uF
+C3_LDOIN LDOIN GND 0.1uF ; Renamed to avoid clash with C3_BBN
+C10 NEG5V GND 0.1uF
+
+* Green LED for J6
+R121 GPIO4 GND 1.0k
+D1 GPIO4_LED GND DLED ; Green LED. Generic LED model assumed.
+* J6 is a connector for the LED, not explicitly modeled in SPICE.
+
+* --- BBP/BBN Bus Bar (Middle Left) ---
+R8 BBP_CELL BBP 0 DNP ; DNP resistor
+R10 BBN_CELL BBN 0 DNP ; DNP resistor
+R12 BBP_CELL_DIV BBP 402 ; Intermediate net BBP_CELL_DIV created
+R13 BBN_CELL_DIV BBN 402 ; Intermediate net BBN_CELL_DIV created
+C_BBP_BB BBP_CELL_DIV GND 0.47uF ; Connected to BBP_CELL_DIV. Renamed C10 for clarity
+C_BBN_BB BBN_CELL_DIV GND 0.47uF ; Connected to BBN_CELL_DIV. Renamed C3 for clarity
+
+* --- SRP/SRN Current Sense (Bottom Left) ---
+R17 SRP_S SRP 0 DNP ; DNP resistor, where SRP is an internal net
+C11 SRN_S SRN 0.47uF DNP ; DNP capacitor, where SRN is an internal net
+
+* --- GPIOs (Middle Right) - Low side NTC circuit ---
+* Jumpers to connect GPIOs to resistor divider and thermistor for temperature measurements.
+* J5 is a jumper, modeled by a short for now. Assuming jumper is closed for TSREF to PULLUP.
+R_J5_short TSREF PULLUP 0 ; Jumper J5 is closed.
+
+R6 PULLUP GPIO8 10.0k
+RT1 GPIO8 GPIO8_R RT_GEN ; NTC Thermistor, generic resistor model for now.
+R7 PULLUP GPIO7 10.0k
+RT2 GPIO7 GPIO7_R RT_GEN
+R_GPIO6 PULLUP GPIO6 10.0k ; R8 is also used for a DNP component earlier, renaming for clarity
+RT3 GPIO6 GPIO6_R RT_GEN
+R11 PULLUP GPIO5 10.0k
+RT4 GPIO5 GPIO5_R RT_GEN
+R14 PULLUP GPIO4 10.0k
+RT5 GPIO4 GPIO4_R RT_GEN
+R15 PULLUP GPIO3 10.0k
+RT6 GPIO3 GPIO3_R RT_GEN
+R16 PULLUP GPIO2 10.0k
+RT7 GPIO2 GPIO2_R RT_GEN
+R18 PULLUP GPIO1 10.0k
+RT8 GPIO1 GPIO1_R RT_GEN
+C_NTC_DNP GPIO1 GND 1uF DNP ; DNP component
+R_NTC_DNP GPIO1 GND 10k DNP ; DNP component
+
+* --- Resistors for Lower Cell Count Applications (Bottom Right) ---
+* All DNP (Do Not Populate) resistors. Represented as 0 Ohm with DNP comment.
+R21 CB12 VC12 0 DNP
+R25 CB13 VC13 0 DNP
+R26 CB14 VC14 0 DNP
+R22 CB15 VC15 0 DNP
+R27 CB16 VC16 0 DNP
+R23_DUP CB15 VC15 0 DNP ; Duplicate net, probably for parallel
+R24_DUP CB14 VC14 0 DNP ; Duplicate net, probably for parallel
+R28_DUP CB13 VC13 0 DNP ; Duplicate net, probably for parallel
+
+* --- UART Communication (Top Right) Discrete Components ---
+R123 USB2ANY_3_3V_J3 USB2ANY_3_3V 100k ; J3 pin 5 to USB2ANY_3_3V
+R120 J3_RX USB2ANY_RX_3_3V 100k ; J3 pin 1 to USB2ANY_RX_3_3V
+R119 J3_TX USB2ANY_TX_3_3V 100k ; J3 pin 2 to USB2ANY_TX_3_3V
+R12 J3_FAULTN FAULTn 100k ; J3 pin 3 to FAULTn
+
+C57 USB2ANY_3_3V GND 0.1uF
+C58 CVDD_CO GND 0.1uF
+C54 NFAULT_C_U2 GND 0.1uF
+
+* J3 Connector (pins are directly mapped to nets)
+* J17A/J17B connectors (no explicit modeling, just net connections)
+
+* --- Model Definitions ---
+.MODEL QNPN NPN ; Generic NPN transistor model
+.MODEL DLED D ; Generic LED model
+.MODEL RT_GEN R ; Generic resistor model for thermistors (behavior to be defined by another agent)
+
+.ENDS SUBCKT_bq79616_with_boxes

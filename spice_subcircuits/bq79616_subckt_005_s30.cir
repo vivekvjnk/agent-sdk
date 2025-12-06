@@ -1,0 +1,75 @@
+
+* SUBCKT_bq79616_subckt_005_s30: SPICE Subcircuit for bq79616_subckt_005_s30.png
+*
+* External Ports:
+* GND, GND_ISO, USB2ANY_3.3V, USB2ANY_TX_3.3, USB2ANY_RX_3.3,
+* NFAULT_C, CVDD_CO, RX_CO, TX, RX, CVDD, NF_J, NFAULT
+*
+.SUBCKT SUBCKT_bq79616_subckt_005_s30 \
+    GND GND_ISO USB2ANY_3.3V USB2ANY_TX_3.3 USB2ANY_RX_3.3 \
+    NFAULT_C CVDD_CO RX_CO TX RX CVDD NF_J NFAULT
+
+*
+* --- IC Stub: U2 (ISO7342CQDWRQ1) ---
+*
+* U2 has 16 pins.
+* Pin naming convention: NAME_N (where N is pin number)
+*
+.SUBCKT ISO7342CQDWRQ1_stub \
+    VCC1_1 GND1_2 INA_3 INB_4 OUTC_5 OUTD_6 EN1_7 GND1_8 \
+    GND2_9 EN2_10 IND_11 INC_12 OUTB_13 OUTA_14 GND2_15 VCC2_16
+* Internal behavior intentionally omitted; to be filled by another agent.
+.ENDS ISO7342CQDWRQ1_stub
+
+*
+* --- Component Instantiations ---
+*
+
+* U2: ISO7342CQDWRQ1
+XU2 VCC1_1 GND1_2 INA_3 INB_4 OUTC_5 OUTD_6 EN1_7 GND1_8 \
+    GND2_9 EN2_10 IND_11 INC_12 OUTB_13 OUTA_14 GND2_15 VCC2_16 \
+    ISO7342CQDWRQ1_stub
+* Mapping of U2 pins to subcircuit nets:
+* VCC1_1 -> USB2ANY_3.3V
+* GND1_2 -> GND_ISO
+* INA_3  -> GND_ISO
+* INB_4  -> USB2ANY_TX_3.3
+* OUTC_5 -> USB2ANY_RX_3.3
+* OUTD_6 -> NFAULT_C
+* EN1_7  -> USB2ANY_3.3V
+* GND1_8 -> GND_ISO
+* GND2_9 -> GND
+* EN2_10 -> GND
+* IND_11 -> NF_J
+* INC_12 -> TX
+* OUTB_13 -> RX_CO
+* OUTA_14 -> RX_CO
+* GND2_15 -> GND
+* VCC2_16 -> CVDD_CO
+XU2 USB2ANY_3.3V GND_ISO GND_ISO USB2ANY_TX_3.3 USB2ANY_RX_3.3 NFAULT_C USB2ANY_3.3V GND_ISO \
+    GND GND NF_J TX RX_CO RX_CO GND CVDD_CO ISO7342CQDWRQ1_stub
+
+* Resistors
+R123 USB2ANY_3.3V GND_ISO 100k
+R120 CVDD RX 100k
+R2 CVDD NF_J 100k
+R119 RX TX 100
+
+* Capacitors
+C57 USB2ANY_3.3V GND_ISO 0.1uF
+C58 CVDD_CO GND 0.1uF
+C4 USB2ANY_3.3V GND 0.1uF
+
+*
+* --- Connectors/External Nets ---
+* The following elements are effectively placeholders or comments to indicate external connections,
+* as their pins are directly mapped to the subcircuit's external ports.
+*
+* J1: Connects RX and CVDD to external system
+* J2: Connects NF_J and NFAULT to external system
+* J21: Connects RX_CO and RX to external system
+* J18: Connects CVDD and CVDD_CO to external system
+* J17A: Connects NFAULT_C and USB2ANY_TX_3.3 to external system
+* J17B: Connects USB2ANY_3.3V, USB2ANY_RX_3.3, and GND to external system
+
+.ENDS SUBCKT_bq79616_subckt_005_s30

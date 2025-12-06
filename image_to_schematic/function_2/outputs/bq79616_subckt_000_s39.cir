@@ -1,0 +1,8 @@
+* SPICE subcircuit for image bq79616_subckt_000_s39.png
+* This subcircuit represents a section with "Do Not Populate" (DNP) resistors.
+* All resistors (R21-R28) are marked DNP and crossed out, implying open circuits.
+* Therefore, no internal connections are made through these resistors.
+* The subcircuit simply defines the external cell balance (CB) and voltage (VC) nets.
+
+.SUBCKT bq79616_subckt_000_s39 CB12 CB13 CB14 CB15 CB16 VC12 VC13 VC14 VC15 VC16
+.ENDS bq79616_subckt_000_s39

@@ -1,0 +1,72 @@
+* SPICE subcircuit for bq79616_subckt_002_s37.png
+* Created by OpenHands Agent - Electrical Engineer and SPICE Modeling Specialist
+
+* External Ports: PWR GND J6_2
+*               CB0-CB16, GPIO1-GPIO8, COMHP, COMHN, COMLP, COMLN, BBP, BBN, RX, TX, NFAULT, REFHM
+
+.SUBCKT SUBCKT_BQ79616_002 PWR GND J6_2 \
+    CB0 CB1 CB2 CB3 CB4 CB5 CB6 CB7 CB8 CB9 CB10 CB11 CB12 CB13 CB14 CB15 CB16 \
+    GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
+    COMHP COMHN COMLP COMLN \
+    BBP BBN \
+    RX TX NFAULT \
+    REFHM
+
+* Internal Net Definitions
+* NET_PWR_BAT: Node between R5, C5, and U1's BAT pin
+* NET_LED_ANODE: Node between R121 and D1 anode
+* NET_LED_CATHODE: Node between D1 cathode and J6 pin 2 (external J6_2)
+
+* --- IC U1: BQ79616PAPQ1 Stub ---
+* This is a stub subcircuit for the BQ79616PAPQ1 IC.
+* Internal behavior is intentionally omitted and to be filled by another agent.
+* Pin order is based on the schematic diagram and OCR results.
+.SUBCKT BQ79616PAPQ1_stub \
+    BAT NEG5V LDOIN NPNB REFHP AVDD CVDD DVDD TSREF \
+    VC0 VC1 VC2 VC3 VC4 VC5 VC6 VC7 VC8 VC9 VC10 VC11 VC12 VC13 VC14 VC15 VC16 \
+    CB0 CB1 CB2 CB3 CB4 CB5 CB6 CB7 CB8 CB9 CB10 CB11 CB12 CB13 CB14 CB15 CB16 \
+    GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
+    COMHP COMHN COMLP COMLN BBP BBN RX TX NFAULT \
+    PAD REFHM AVSS CVSS DVSS
+
+* Internal behavior intentionally omitted; to be filled by another agent.
+.ENDS BQ79616PAPQ1_stub
+
+* --- Component Instantiations ---
+
+* U1: BQ79616PAPQ1 IC
+XU1 NET_PWR_BAT NEG5V LDOIN NPNB REFHP AVDD CVDD DVDD TSREF \
+    VC0 VC1 VC2 VC3 VC4 VC5 VC6 VC7 VC8 VC9 VC10 VC11 VC12 VC13 VC14 VC15 VC16 \
+    CB0 CB1 CB2 CB3 CB4 CB5 CB6 CB7 CB8 CB9 CB10 CB11 CB12 CB13 CB14 CB15 CB16 \
+    GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
+    COMHP COMHN COMLP COMLN BBP BBN RX TX NFAULT \
+    GND REFHM GND GND GND BQ79616PAPQ1_stub
+* Assumption: AVSS, CVSS, DVSS are connected to GND and PAD to GND within this subcircuit context.
+*           REFHM (pin 36) is connected to the REFHM net.
+
+* Resistors
+R5 PWR NET_PWR_BAT 30.0
+R121 NET_PWR_BAT NET_LED_ANODE 1.0k
+
+* Capacitors (Decoupling as close to the chip as possible, all to GND)
+C2 TSREF GND 1uF
+C3 NEG5V GND 0.1uF
+C59 LDOIN GND 0.1uF
+C5 NET_PWR_BAT GND 10nF
+C6 AVDD GND 1uF
+C7 CVDD GND 4.7uF
+C8 DVDD GND 1uF
+C9 REFHP GND 1uF
+
+* Diode D1 (Green LED)
+D1 NET_LED_ANODE NET_LED_CATHODE DLED
+.MODEL DLED D (Is=1n Rs=10m N=1.7 Vfwd=2.0)
+* Assumption: Generic LED model used as no specific part number or characteristics are given.
+*             NET_LED_CATHODE is an internal net connected to J6_2.
+
+* Connector J6
+* J6 pin 1 is connected to GND, J6 pin 2 is connected to NET_LED_CATHODE (external J6_2)
+* J6_1 GND 0V  * J6 pin 1 directly to GND
+* J6_2 NET_LED_CATHODE 0V * J6 pin 2 is an external port J6_2
+
+.ENDS SUBCKT_BQ79616_002

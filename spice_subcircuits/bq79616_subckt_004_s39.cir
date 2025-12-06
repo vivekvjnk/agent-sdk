@@ -1,0 +1,20 @@
+* SPICE subcircuit for bq79616_subckt_004_s39.png - Test Points
+* This subcircuit defines a set of test points as external interfaces.
+* There are no active components within this subcircuit.
+*
+.SUBCKT SUBCKT_bq79616_subckt_004_s39 \
++ TSREF_1 LDOIN_2 NEG5V_3 NPNB_4 RX_12 CVDD_5 AVDD_6 REFHP_7 BAT_8 \
++ TX_42 DVDD_9 BBP_10 BBN_11 NFAULT_43 GND
+
+* Internal connections for ground test points:
+* TP15, TP13, TP14 are all connected to the common external GND port.
+* In SPICE, if nodes are listed in the .SUBCKT line, they are external. If not, they are internal.
+* Here, GND is an external node, and the specific TP_GND nodes are internal and connected to it.
+
+* Connecting individual ground test points to the common GND net
+* These are effectively just different access points to the same GND net.
+R_TP15_GND GND_15 GND 1e-6    * Small resistance to tie TP15 to GND
+R_TP13_GND GND_13 GND 1e-6    * Small resistance to tie TP13 to GND
+R_TP14_GND GND_14 GND 1e-6    * Small resistance to tie TP14 to GND
+
+.ENDS SUBCKT_bq79616_subckt_004_s39

@@ -1,0 +1,23 @@
+* SUBCKT_bq79616_subckt_004_s39 - Test Points Subcircuit
+* This subcircuit represents a collection of test points and their associated nets.
+* No active components are modeled; this subcircuit serves to define the interface for these nets.
+.SUBCKT SUBCKT_bq79616_subckt_004_s39 GND TSREF LDOIN NEG5V NPNB RX CVDD AVDD REFHP BAT TX DVDD BBP BBN NFAULT
+*
+* Test Point Definitions (for clarity, these are direct connections to the main subcircuit ports)
+* TP15, TP13, TP14 are connected to GND
+* TP1 is connected to TSREF
+* TP2 is connected to LDOIN
+* TP3 is connected to NEG5V
+* TP4 is connected to NPNB
+* TP12 is connected to RX
+* TP5 is connected to CVDD
+* TP6 is connected to AVDD
+* TP7 is connected to REFHP
+* TP8 is connected to BAT
+* TP42 is connected to TX
+* TP9 is connected to DVDD
+* TP10 is connected to BBP
+* TP11 is connected to BBN
+* TP43 is connected to NFAULT
+*
+.ENDS SUBCKT_bq79616_subckt_004_s39

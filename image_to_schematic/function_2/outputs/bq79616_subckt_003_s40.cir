@@ -1,0 +1,27 @@
+* SUBCKT_bq79616_003_s40: Part of bq79616 schematic, subcircuit 003, section 40.
+
+.SUBCKT SUBCKT_bq79616_003_s40 BBP_CELL BBN_CELL SRP_S SRN_S BBP BBN
+
+* BBP/BBN Bus Bar section filtering
+* Resistors R9 and R12 form a voltage divider/filter with C10.
+* R9 value from schematic: 402 Ohms
+R9 BBP_CELL NET_C10_TOP 402
+
+* R12 value from schematic: 402 Ohms
+R12 BBN_CELL NET_C10_TOP 402
+
+* C10 value from schematic: 0.47uF
+* This capacitor is connected between NET_C10_TOP and NET_C10_BOTTOM.
+* R10 and R13 (which would connect NET_C10_BOTTOM to BBP and BBN respectively)
+* are marked DNP (Do Not Populate) and are thus omitted.
+* This leaves NET_C10_BOTTOM floating with respect to the BBP and BBN external pins
+* within this subcircuit. This may indicate an incomplete subcircuit or a design
+* where this node is intentionally left open if R10/R13 are not populated.
+C10 NET_C10_TOP NET_C10_BOTTOM 0.47uF
+
+* SRP/SRN Current Sense section
+* This section consists only of external connections; no internal components are
+* populated according to the schematic (R17 DNP, C11 DNP).
+* SRP_S, SRN_S, BBP, BBN are passed through as subcircuit ports.
+
+.ENDS SUBCKT_bq79616_003_s40

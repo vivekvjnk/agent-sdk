@@ -1,0 +1,73 @@
+* SPICE subcircuit for bq79616_subckt_001_s39.png
+* This subcircuit captures GPIO connections, a basic RC filter, a TVS diode, and multiple NTC thermistor measurement circuits.
+
+.SUBCKT SUBCKT_bq79616_subckt_001_s39 \
++ GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
++ GPIO1_R GPIO2_R GPIO3_R GPIO4_R GPIO5_R GPIO6_R GPIO7_R GPIO8_R \
++ GPIO1_C TP44 TSREF PULLUP GND
+
+* J4: GPIO Connector (pins are represented as subcircuit ports)
+* The GPIO1 to GPIO8 nets are inputs from an external source.
+* The GPIO1_R to GPIO8_R nets are connected to the internal circuitry and J4 outputs.
+* Jumper configurations are assumed to be handled externally if needed.
+
+* J5: TSREF/PULLUP Jumper (pins are represented as subcircuit ports)
+* TSREF is an input reference.
+* PULLUP is used as a voltage rail for pull-up resistors in the NTC circuits.
+
+* RC Filter on GPIO1_C
+R128 GPIO1_C GPIO1_R 1.0k
+C60 GPIO1_C GND 1uF
+
+* D3: TVS Diode - Stub subcircuit for external protection device
+* The internal behavior of D3 is omitted; to be filled by another agent.
+* This is a 3-pin TVS diode, with connections to TP44, GPIO1_R, and GND.
+XD3 TP44 GPIO1_R GND D3_TVS_stub
+
+* Low Side NTC Thermistor Measurement Circuits
+* These circuits consist of a pull-up resistor to PULLUP and a thermistor to GND.
+* The thermistors (RTx) are modeled as simple resistors for basic connectivity;
+* a more detailed thermistor model would be required for accurate temperature simulation.
+
+* Circuit for GPIO8_R
+R7 PULLUP GPIO8_R 10.0k
+RT1 GPIO8_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO7_R
+R8 PULLUP GPIO7_R 10.0k
+RT2 GPIO7_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO6_R
+R11 PULLUP GPIO6_R 10.0k
+RT3 GPIO6_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO5_R
+R14 PULLUP GPIO5_R 10.0k
+RT4 GPIO5_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO4_R
+R15 PULLUP GPIO4_R 10.0k
+RT5 GPIO4_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO3_R
+R16 PULLUP GPIO3_R 10.0k
+RT6 GPIO3_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO2_R
+R18 PULLUP GPIO2_R 10.0k
+RT7 GPIO2_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Circuit for GPIO1_R
+R19 PULLUP GPIO1_R 10.0k
+RT8 GPIO1_R GND 10k * Assumed thermistor, value 10k at reference temperature
+
+* Ignored R20 as it is marked as DNP (Do Not Populate) or crossed out.
+
+.ENDS SUBCKT_bq79616_subckt_001_s39
+
+* Stub for D3 TVS Diode
+* This subcircuit is a placeholder for a more complex TVS diode model.
+* The pin order (TP44, GPIO1_R, GND) is derived from the schematic.
+.SUBCKT D3_TVS_stub TP44 GPIO1_R GND
+* Internal behavior intentionally omitted; to be filled by another agent.
+.ENDS D3_TVS_stub

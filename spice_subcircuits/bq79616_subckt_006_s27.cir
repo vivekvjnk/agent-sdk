@@ -1,0 +1,102 @@
+* SPICE Subcircuit for bq79616_subckt_006_s27.png
+* Extracted from schematic image
+
+.SUBCKT SUBCKT_bq79616_subckt_006_s27 \
++ GND TSREF LDOIN NEG5V NPNB RX CVDD AVDD REFHP BBP BBN NFAULT TX DVDD BAT PWR \
++ USB2ANY_3.3V USB2ANY_TX_3.3 USB2ANY_RX_3.3 GND_ISO CVDD_CO PULLUP \
++ BBP_CELL0 SRP_S SRN_S \
++ GPIO1 GPIO2 GPIO3 GPIO4 GPIO5 GPIO6 GPIO7 GPIO8 \
++ GPIO1_R GPIO2_R GPIO3_R GPIO4_R GPIO5_R GPIO6_R GPIO7_R GPIO8_R
+
+* --- IC Stubs ---
+* U1: BQ79616PAPQ1 - 16-Cell Analog Front End
+* Based on schematic visual information, combining labels for pins with multiple names.
+* Physical pins shown in schematic are: 1, 18-65. Total 49 distinct pin numbers.
+* Internal behavior intentionally omitted; to be filled by another agent.
+.SUBCKT U1_stub BAT_1 VC16_CB15_19 VC15_CB14_20 VC14_CB13_21 VC13_CB12_22 VC12_CB11_23 VC11_CB10_24 VC10_CB9_25 VC9_CB8_26 VC8_CB7_27 VC7_CB6_28 VC6_CB5_29 VC5_CB4_30 VC4_CB3_31 VC3_CB2_32 VC2_CB1_33 VC1_CB0_34 VC0_35 CB16_18 REFHM_36 REFHP_37 AVDD_38 NC_39 COMLP_40 COMLN_41 COMPHN_42 COMPHP_43 NEG5V_44 CVDD_45 AVSS_46 LDOIN_47 NPNB_48 DVDD_49 DVSS_50 TSREF_51 RX_52 TX_53 GPIO7_54 GPIO6_55 GPIO5_56 GPIO4_57 GPIO3_58 GPIO2_59 GPIO1_60 NC_61 NFAULT_62 BBP_63 BBN_64 PAD_65
+.ENDS U1_stub
+
+* U2: ISO7342CQDWRQ1 - Quad-Channel Digital Isolator
+* Internal behavior intentionally omitted; to be filled by another agent.
+.SUBCKT U2_stub VCC1_1 VCC1_2 INA_3 INB_4 INC_5 IND_6 EN1_7 GND1_8 GND2_9 EN2_10 OUTD_11 OUTC_12 OUTB_13 OUTA_14 VCC2_15 VCC2_16
+.ENDS U2_stub
+
+* --- Component Instances ---
+
+* U1 Instance
+* Pin connections from schematic, PAD_65 connected to GND. NC pins connected to dummy internal nets.
+XU1 BAT VC16_CB15 VC15_CB14 VC14_CB13 VC13_CB12 VC12_CB11 VC11_CB10 VC10_CB9 VC9_CB8 VC8_CB7 VC7_CB6 VC6_CB5 VC5_CB4 VC4_CB3 VC3_CB2 VC2_CB1 VC1_CB0 VC0 CB16 REFHM REFHP AVDD NC_U1_39 COMLP COMLN COMPHN COMPHP NEG5V CVDD AVSS LDOIN NPNB DVDD DVSS TSREF RX TX GPIO7 GPIO6 GPIO5 GPIO4 GPIO3 GPIO2 GPIO1 NC_U1_61 NFAULT BBP BBN GND U1_stub
+
+* U2 Instance
+* Pin connections from schematic. INC_5, IND_6, OUTD_11, OUTC_12 are not connected on schematic.
+XU2 USB2ANY_3.3V USB2ANY_3.3V USB2ANY_TX_3.3 USB2ANY_RX_3.3 NC_U2_INC NC_U2_IND GND_ISO GND_ISO GND_ISO CVDD_CO NC_U2_OUTD NC_U2_OUTC RX_CO RX_CO CVDD_CO CVDD_CO U2_stub
+
+
+* --- Discrete Components ---
+
+* NPN Power Supply
+Q1 LDOIN NPNB GND NPN_GENERIC
+R3 NPNB LDOIN 100
+R4 NPNB PWR 200
+C1 LDOIN GND 0.22uF
+
+* Decoupling Capacitors for U1
+C2 CVDD GND 1uF
+C3 DVDD GND 0.1uF
+C5 LDOIN GND 10nF
+C6 AVDD GND 1uF
+C7 BAT GND 4.7uF
+C8 REFHP GND 1uF
+C9 NEG5V GND 1uF
+
+* Resistors and Diode near U1
+R121 LDOIN LED_K 1.0k
+D1 LED_K GND D_GENERIC * Green LED
+
+* UART Communication (associated with U2)
+R120 TX_CO TX 100k
+R119 RX RX_CO 100k
+C57 USB2ANY_3.3V GND_ISO 0.1uF
+C58 CVDD_CO GND 0.1uF
+C4 USB2ANY_RX_3.3 GND_ISO 0.1uF
+
+* BBP/BBN Bus Bar
+R9 BBP_CELL0 BBP 402
+*R10 DNP (Do Not Populate) - not included in netlist
+R12 BBP_CELL0 BBN 402
+*R13 DNP (Do Not Populate) - not included in netlist
+C10 BBP BBN 0.47uF
+
+* SRP/SRN Current Sense
+C11 SRP_S SRN_S 0.47uF
+
+* Low side NTC circuit
+R7 GPIO8_R PULLUP 10.0k
+RT1 GPIO8_R GND * NTC Thermistor, modeled as resistor
+R8 GPIO7_R PULLUP 10.0k
+RT2 GPIO7_R GND * NTC Thermistor, modeled as resistor
+R11 GPIO6_R PULLUP 10.0k
+RT3 GPIO6_R GND * NTC Thermistor, modeled as resistor
+R14 GPIO5_R PULLUP 10.0k
+RT4 GPIO5_R GND * NTC Thermistor, modeled as resistor
+R15 GPIO4_R PULLUP 10.0k
+RT5 GPIO4_R GND * NTC Thermistor, modeled as resistor
+R18 GPIO3_R PULLUP 10.0k
+RT6 GPIO3_R GND * NTC Thermistor, modeled as resistor
+R19 GPIO2_R PULLUP 10.0k
+RT7 GPIO2_R GND * NTC Thermistor, modeled as resistor
+*R20 DNP (Do Not Populate) - not included in netlist
+*C20 DNP (Do Not Populate) - not included in netlist
+
+* GPIO section
+R128 GPIO1 GND 1.0k
+C60 GPIO1 GND 1uF
+D3 GPIO1 GND D_ZENER_24V * Zener diode, assuming 24V
+
+* --- Models ---
+.MODEL NPN_GENERIC NPN
+.MODEL D_GENERIC D
+.MODEL D_ZENER_24V D(Zener=24V)
+
+* --- End of Subcircuit ---
+.ENDS SUBCKT_bq79616_subckt_006_s27
