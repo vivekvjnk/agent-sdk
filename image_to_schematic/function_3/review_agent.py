@@ -4,11 +4,21 @@ Function 3: SPICE Netlist Review & Correction Agent.
 This agent acts as a "Visual Netlist Auditor". It takes the SPICE code generated
 by Function 2, compares it against the source images (both segmented and full),
 detects hallucinations (like label blindness), and applies corrections in-place.
+
+This version:
+- Reads *.cir files from GCS.
+- Downloads them into a temporary local directory for the agent to edit.
+- After review, compares local vs original GCS content.
+- If changed, uploads the reviewed file & a diff report to a versioned
+  hierarchy in GCS, without overwriting the original.
 """
 
 import os
+import tempfile
+import difflib
+from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import SecretStr
 from google.cloud import storage
@@ -17,45 +27,16 @@ from openhands.sdk import (
     LLM,
     Agent,
     Conversation,
-    Event,
     ImageContent,
-    LLMConvertibleEvent,
     Message,
     TextContent,
     get_logger,
 )
 from openhands.sdk.tool.spec import Tool
 from openhands.tools.file_editor import FileEditorTool
-from openhands.tools.task_tracker import TaskTrackerTool
 from openhands.tools.terminal import TerminalTool
 
 logger = get_logger(__name__)
-
-# ---------------------------------------------------------------------------
-# GCS Helper (Reused from Function 2)
-# ---------------------------------------------------------------------------
-
-def upload_image_to_gcs(
-    local_path: Path,
-    bucket_name: str,
-    prefix: str = "schematic_subcircuits/",
-    make_public: bool = False,
-) -> str:
-    """
-    Uploads image to GCS and returns URI.
-    """
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob_name = f"{prefix}{local_path.name}"
-    blob = bucket.blob(blob_name)
-    
-    if not blob.exists(): # Optimization: Don't re-upload if exists
-        blob.upload_from_filename(str(local_path))
-    
-    if make_public:
-        blob.make_public()
-        return blob.public_url
-    return f"gs://{bucket_name}/{blob_name}"
 
 # ---------------------------------------------------------------------------
 # System Prompt: The "Auditor" Persona
@@ -71,7 +52,7 @@ incorrect node names, and connectivity errors.
 YOUR WORKFLOW
 -------------
 1. **Visual Scan**: Look at the provided images (Segmented View is primary). 
-   Identify every visible text label attached to a wire (e.g., "BAT", "AVDD").
+   Identify every visible text label attached to a wire (e.g., "GND", "VDD").
 2. **Netlist Verification**: Compare these visible labels to the `.NET` or node 
    names in the provided SPICE code.
 3. **Topology Check**: Pick random components and trace their connections visually. 
@@ -80,9 +61,9 @@ YOUR WORKFLOW
 CRITICAL ERROR TYPES TO FIX
 ---------------------------
 1. **Label Blindness (Hallucination)**: 
-   - Error: The SPICE uses a generic name like `PWR_R5_OUT` or `NET01`, but the 
-     image clearly shows a text label like `BAT` on that wire.
-   - Fix: You MUST rename the node in the SPICE file to match the image label (`BAT`).
+   - Error: The SPICE uses a generic name like `R20_OUT` or `NET01`, but the 
+     image clearly shows a text label like `VDD` on that wire.
+   - Fix: You MUST rename the node in the SPICE file to match the image label (`VDD`).
    
 2. **Pin Misalignment**:
    - Error: The SPICE connects a component to Pin 1, but the image shows it 
@@ -106,171 +87,285 @@ CORRECTION PROTOCOL
 OUTPUT
 ------
 - If you find errors, fix them in the file using FileEditorTool.
-- Provide a brief summary of your fixes in the chat (e.g., "Renamed PWR_R5_OUT to BAT").
+- Provide a brief summary of your fixes in the chat (e.g., "Renamed NET01 to VDD").
 - If the file is perfect, state "PASSED" and do not edit the file.
 """.strip()
 
 # ---------------------------------------------------------------------------
-# Main Pipeline: Function 3 (Review)
+# Helper: Resolve GCS image URIs (read-only)
+# ---------------------------------------------------------------------------
+
+def find_segment_image_gcs_uri(
+    bucket: storage.Bucket,
+    bucket_name: str,
+    images_prefix: str,
+    image_stem: str,
+) -> Optional[str]:
+    """
+    Given an image stem (e.g., 'bq79616_subckt_003_s40'), try to find a matching
+    image blob in GCS under images_prefix with extensions .png/.jpg/.jpeg.
+    Returns the gs:// URI if found, else None.
+    """
+    images_prefix = images_prefix.rstrip("/")
+    for ext in [".png", ".jpg", ".jpeg"]:
+        blob_name = f"{images_prefix}/{image_stem}{ext}"
+        blob = bucket.blob(blob_name)
+        if blob.exists():
+            return f"gs://{bucket_name}/{blob_name}"
+    return None
+
+# ---------------------------------------------------------------------------
+# Main Pipeline: Function 3 (Review, GCS-based)
 # ---------------------------------------------------------------------------
 
 def run_spice_review_pipeline(
-    segmented_images_subdir: str = "../function_1/schematic_subcircuits",
-    spice_input_subdir: str = "spice_subcircuits", # Output of Function 2
-    full_schematic_path: Optional[str] = None,     # Path to original full image
     gcs_bucket_name: str = "vhl",
-    gcs_prefix: str = "schematic_review/",
+    gcs_spice_prefix: str = "schematic_subcircuits/SPICE",
+    gcs_images_prefix: str = "schematic_subcircuits/images",
+    # Full schematic image already uploaded by a previous function, e.g.:
+    # "schematic_subcircuits/images/bq79616_with_boxes.png"
+    full_schematic_gcs_blob: Optional[str] = "schematic_subcircuits/images/bq79616_with_boxes.png",
 ):
     """
-    Function 3: Iterates over generated SPICE files and their corresponding images.
-    Uses an Agent to audit and fix the SPICE code.
+    Function 3: Iterates over generated SPICE files stored in GCS and their
+    corresponding images (also in GCS). Uses an Agent to audit and fix the
+    SPICE code.
+
+    Flow:
+    - List *.cir blobs under gcs_spice_prefix in GCS.
+    - For each .cir:
+        - Download into a temporary directory.
+        - Run the review agent with access to:
+            - Local .cir file (editable via FileEditorTool)
+            - Subcircuit image (GCS)
+            - Full schematic image (GCS, optional)
+        - After conversation, compare local vs original GCS content.
+        - If different:
+            - Write a diff report in the temp directory.
+            - Upload reviewed .cir and diff to a versioned hierarchy in GCS:
+              {gcs_spice_prefix}/reviewed/{stem}/{stem}_reviewed_<timestamp>.cir
+              {gcs_spice_prefix}/reviewed/{stem}/{stem}_review_diff_<timestamp>.txt
+    - Original .cir files in GCS are never overwritten.
     """
     # ----------------------------------------------------------------------
-    # Resolve paths
+    # Configure GCS
     # ----------------------------------------------------------------------
-    script_dir = Path(__file__).resolve().parent
-    images_dir = script_dir / segmented_images_subdir
-    spice_dir = script_dir / spice_input_subdir
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(gcs_bucket_name)
 
-    if not spice_dir.exists():
-        raise FileNotFoundError(f"SPICE directory not found: {spice_dir}. Run Function 2 first.")
+    # Normalize prefixes
+    gcs_spice_prefix = gcs_spice_prefix.rstrip("/")
+    gcs_images_prefix = gcs_images_prefix.rstrip("/")
 
-    # Get list of SPICE files
-    spice_files = sorted(list(spice_dir.glob("*.cir")))
-    logger.info(f"Found {len(spice_files)} SPICE files to review")
+    # List all .cir blobs under the SPICE prefix
+    cir_blobs = [
+        blob
+        for blob in storage_client.list_blobs(bucket, prefix=gcs_spice_prefix + "/")
+        if blob.name.lower().endswith(".cir")
+    ]
 
-    # ----------------------------------------------------------------------
-    # Upload Full Schematic (Once)
-    # ----------------------------------------------------------------------
-    full_schematic_url = None
-    if full_schematic_path:
-        full_path = Path(full_schematic_path).resolve()
-        if full_path.exists():
-            logger.info(f"Uploading full schematic reference: {full_path.name}")
-            full_schematic_url = upload_image_to_gcs(
-                full_path, gcs_bucket_name, prefix=gcs_prefix
-            )
+    if not cir_blobs:
+        raise FileNotFoundError(
+            f"No .cir files found in GCS under prefix: {gcs_spice_prefix}/"
+        )
+
+    logger.info(f"Found {len(cir_blobs)} SPICE .cir files in GCS to review")
+
+    # Full schematic URI (if provided)
+    full_schematic_url: Optional[str] = None
+    if full_schematic_gcs_blob:
+        full_schematic_gcs_blob = full_schematic_gcs_blob.lstrip("/")
+        full_blob = bucket.blob(full_schematic_gcs_blob)
+        if full_blob.exists():
+            full_schematic_url = f"gs://{gcs_bucket_name}/{full_schematic_gcs_blob}"
+            logger.info(f"Using full schematic from GCS: {full_schematic_url}")
         else:
-            logger.warning(f"Full schematic path provided but not found: {full_schematic_path}")
+            logger.warning(
+                f"Full schematic blob not found in GCS: {full_schematic_gcs_blob}. "
+                "Continuing without full schematic context."
+            )
 
     # ----------------------------------------------------------------------
     # Configure LLM (Reviewer needs high reasoning, e.g., Gemini 1.5 Pro)
     # ----------------------------------------------------------------------
     api_key = os.getenv("LLM_API_KEY")
-    # Ideally use a stronger model for review than generation
-    model = os.getenv("LLM_REVIEW_MODEL", "google/gemini-1.5-pro-002") 
-    
+    model = os.getenv("LLM_REVIEW_MODEL", "google/gemini-3-pro-preview")
+
     llm = LLM(
         usage_id="review-llm",
         model=model,
         api_key=SecretStr(api_key),
     )
-    
-    cwd = os.getcwd()
+
+    # Create a temporary workspace directory for this run
+    temp_root = Path(tempfile.mkdtemp(prefix="spice_review_"))
+    logger.info(f"Created temporary workspace: {temp_root}")
+
+    # Agent tools operate inside this workspace
+    workspace_dir = temp_root
 
     agent = Agent(
         llm=llm,
         tools=[
             Tool(name=TerminalTool.name),
-            Tool(name=FileEditorTool.name), # Critical for fixing the file
+            Tool(name=FileEditorTool.name),  # Critical for fixing the file
         ],
     )
 
     system_prompt = build_review_system_prompt()
 
     # ----------------------------------------------------------------------
-    # Process each SPICE file
+    # Process each SPICE file from GCS
     # ----------------------------------------------------------------------
-    for spice_file in spice_files:
-        # Find corresponding image
-        image_stem = spice_file.stem # e.g., subckt_003
-        
-        # Look for matching image with supported extensions
-        img_path = None
-        for ext in [".png", ".jpg", ".jpeg"]:
-            candidate = images_dir / f"{image_stem}{ext}"
-            if candidate.exists():
-                img_path = candidate
-                break
-        
-        if not img_path:
-            logger.warning(f"Skipping review for {spice_file.name}: No matching image found.")
-            continue
+    for cir_blob in cir_blobs:
+        cir_blob_name = cir_blob.name  # e.g., schematic_subcircuits/SPICE/bq79616_subckt_003_s40.cir
+        filename = Path(cir_blob_name).name
+        image_stem = Path(filename).stem  # e.g., bq79616_subckt_003_s40
 
-        logger.info(f"Reviewing: {spice_file.name} against {img_path.name}")
+        logger.info(f"Starting review for GCS blob: {cir_blob_name}")
 
-        # 1. Upload Segmented Image
-        seg_img_url = upload_image_to_gcs(
-            img_path, gcs_bucket_name, prefix=gcs_prefix
+        # Download original content from GCS
+        original_spice_content = cir_blob.download_as_text(encoding="utf-8")
+
+        # Write to local temp file (this is what the agent will edit)
+        local_spice_path = workspace_dir / filename
+        local_spice_path.write_text(original_spice_content, encoding="utf-8")
+
+        # Resolve segmented image from GCS
+        seg_img_url = find_segment_image_gcs_uri(
+            bucket=bucket,
+            bucket_name=gcs_bucket_name,
+            images_prefix=gcs_images_prefix,
+            image_stem=image_stem,
         )
 
-        # 2. Read existing SPICE content to pass in prompt
-        # (This saves the agent a step of reading it manually)
-        current_spice_content = spice_file.read_text(encoding='utf-8')
+        if not seg_img_url:
+            logger.warning(
+                f"Skipping review for {cir_blob_name}: "
+                f"No matching image found in GCS under prefix '{gcs_images_prefix}'."
+            )
+            continue
 
-        # 3. Construct the Task Prompt
+        logger.info(
+            f"Reviewing {filename} using segmented image: {seg_img_url}"
+            + (f" and full schematic: {full_schematic_url}" if full_schematic_url else "")
+        )
+
+        # Construct the task prompt for this file
         user_instruction = f"""
 STARTING REVIEW TASK
 --------------------
-**Target File**: {spice_file.name}
-**Path**: {spice_file.resolve()}
+**Source (GCS)**: gs://{gcs_bucket_name}/{cir_blob_name}
+**Local Target File**: {local_spice_path.name}
+**Local Path**: {local_spice_path}
 
-**Current SPICE Content**:
-```spice
-{current_spice_content}
-````
+The SPICE file above was downloaded from GCS into your workspace.
+You must operate on the local file using FileEditorTool.
+
+**Current SPICE Content (initial version from GCS)**:
+\```spice
+{original_spice_content}
+\```
 
 **Instructions**:
 
-1.  Analyze the **Segmented Image** (attached) closely.
+1. Analyze the **Segmented Image** (attached via GCS) closely.
 
-2.  (Optional) Check the **Full Schematic** (attached) if you need global context for wire destinations.
+2. (Optional) Check the **Full Schematic** (attached via GCS, if present)
+   if you need global context for wire destinations.
 
-3.  Compare the image text labels against the SPICE nodes.
+3. Compare the image text labels against the SPICE nodes.
 
-4.  If you find errors (especially missing labels like 'BAT' replaced by generic names), use the `FileEditorTool` to overwrite {spice_file.name} with the corrected content.
+4. If you find errors (especially missing labels replaced by generic names),
+   use the `FileEditorTool` to overwrite {local_spice_path.name} with the corrected content.
+   Do NOT create a new file; always edit this one.
 
-5.  If the SPICE is correct, reply "PASSED".
-""".strip()
+5. If the SPICE is correct, reply "PASSED" and do not modify the file further.
+   """.strip()
 
-    # 4. Prepare Message Content
-    content_payload = [TextContent(text=user_instruction)]
-    
-    # Attach Segmented Image (High Resolution Focus)
-    content_payload.append(ImageContent(image_urls=[seg_img_url]))
-    
-    # Attach Full Schematic (Global Context) if available
-    if full_schematic_url:
-        content_payload.append(ImageContent(image_urls=[full_schematic_url]))
+        # Prepare message content
+        content_payload = [TextContent(text=user_instruction)]
 
-    # 5. Run Agent
-    conversation = Conversation(
-        agent=agent,
-        workspace=cwd,
-    )
+        # Attach segmented image
+        content_payload.append(ImageContent(image_urls=[seg_img_url]))
 
-    # Set System Persona
-    conversation.send_message(
-        Message(role="user", content=[TextContent(text=system_prompt)])
-    )
+        # Attach full schematic if available
+        if full_schematic_url:
+            content_payload.append(ImageContent(image_urls=[full_schematic_url]))
 
-    # Send Task
-    conversation.send_message(
-        Message(role="user", content=content_payload)
-    )
+        # Run a fresh conversation for this file
+        conversation = Conversation(
+            agent=agent,
+            workspace=str(workspace_dir),
+        )
 
-    conversation.run()
-    
-    print(f"Finished review for {spice_file.name}")
-    print("-" * 50)
-    
-    print(f"Total Review Cost: {llm.metrics.accumulated_cost}")
+        # Set system persona (as a user message in this SDK)
+        conversation.send_message(
+            Message(role="user", content=[TextContent(text=system_prompt)])
+        )
+
+        # Send task
+        conversation.send_message(
+            Message(role="user", content=content_payload)
+        )
+
+        conversation.run()
+
+        # ------------------------------------------------------------------
+        # Post-review: compare original vs edited file, version & upload
+        # ------------------------------------------------------------------
+        edited_spice_content = local_spice_path.read_text(encoding="utf-8")
+
+        if edited_spice_content == original_spice_content:
+            logger.info(f"No changes detected for {filename}; skipping versioned upload.")
+            print(f"[NO CHANGE] {filename}")
+            print("-" * 50)
+            continue
+
+        # There are changes: generate a diff report in the temp directory
+        timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        diff_filename = f"{image_stem}_review_diff_{timestamp}.txt"
+        diff_path = workspace_dir / diff_filename
+
+        diff_lines = difflib.unified_diff(
+            original_spice_content.splitlines(keepends=True),
+            edited_spice_content.splitlines(keepends=True),
+            fromfile="original",
+            tofile="reviewed",
+        )
+
+        diff_text = "".join(diff_lines)
+        diff_path.write_text(diff_text, encoding="utf-8")
+
+        # Prepare versioned hierarchy in GCS
+        version_base_prefix = f"{gcs_spice_prefix}/reviewed/{image_stem}"
+        versioned_cir_blob_name = f"{version_base_prefix}/{image_stem}_reviewed_{timestamp}.cir"
+        versioned_diff_blob_name = f"{version_base_prefix}/{diff_filename}"
+
+        # Upload reviewed .cir
+        reviewed_blob = bucket.blob(versioned_cir_blob_name)
+        reviewed_blob.upload_from_filename(str(local_spice_path))
+
+        # Upload diff report
+        diff_blob = bucket.blob(versioned_diff_blob_name)
+        diff_blob.upload_from_filename(str(diff_path))
+
+        logger.info(
+            f"Uploaded reviewed SPICE to gs://{gcs_bucket_name}/{versioned_cir_blob_name} "
+            f"and diff to gs://{gcs_bucket_name}/{versioned_diff_blob_name}"
+        )
+
+        print(f"[UPDATED] {filename}")
+        print(f"  New version: gs://{gcs_bucket_name}/{versioned_cir_blob_name}")
+        print(f"  Diff:        gs://{gcs_bucket_name}/{versioned_diff_blob_name}")
+        print("-" * 50)
+        print(f"Total Review Cost: {llm.metrics.accumulated_cost}")
 
 if __name__ == "__main__":
-    # Example Usage
-    run_spice_review_pipeline(
-    segmented_images_subdir="../function_1/schematic_subcircuits",
-    spice_input_subdir="spice_subcircuits",
-    full_schematic_path="../function_1/original_full_schematic.png", # Path to the big image
-    gcs_bucket_name="vhl"
-    )
+  # Example usage for your current bucket layout
+  run_spice_review_pipeline(
+  gcs_bucket_name="vhl",
+  gcs_spice_prefix="schematic_subcircuits/SPICE",
+  gcs_images_prefix="schematic_subcircuits/images",
+  full_schematic_gcs_blob="schematic_subcircuits/images/bq79616_with_boxes.png",
+  )

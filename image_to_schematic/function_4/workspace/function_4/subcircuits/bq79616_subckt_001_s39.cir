@@ -1,0 +1,47 @@
+* SPICE Subcircuit for bq79616_subckt_001_s39.png
+* GPIOs and Low Side NTC Circuit
+
+.SUBCKT SUBCKT_bq79616_subckt_001_s39 GPIO1_1 GPIO1_C_2 GPIO2_3 GPIO2_R_4 GPIO3_5 GPIO3_R_6 GPIO4_7 GPIO4_R_8 GPIO5_9 GPIO5_R_10 GPIO6_11 GPIO6_R_12 GPIO7_13 GPIO7_R_14 GPIO8_15 GPIO8_R_16 PULLUP_1 TSREF_2 TP44 GND
+
+* J4 connector pins are mapped directly to external subcircuit ports.
+* J5 connector pins are mapped directly to external subcircuit ports.
+
+* Components in the GPIO1_C path
+R128 GPIO1_C_2 TP44 1.0k
+C60 GPIO1_C_2 GND 1uF
+D3 GND GPIO1_C_2 D_ZENER_24V
+
+* Resistor-Thermistor divider networks
+* PULLUP_1 net connects to the top of the divider.
+* RTx represent NTC Thermistors (assumed 10k nominal for basic model).
+
+R19 PULLUP_1 GPIO1_R_4 10.0k
+RT8 GPIO1_R_4 GND 10k ; NTC Thermistor
+
+R18 PULLUP_1 GPIO2_R_4 10.0k
+RT7 GPIO2_R_4 GND 10k ; NTC Thermistor
+
+R16 PULLUP_1 GPIO3_R_6 10.0k
+RT6 GPIO3_R_6 GND 10k ; NTC Thermistor
+
+R15 PULLUP_1 GPIO4_R_8 10.0k
+RT5 GPIO4_R_8 GND 10k ; NTC Thermistor
+
+R14 PULLUP_1 GPIO5_R_10 10.0k
+RT4 GPIO5_R_10 GND 10k ; NTC Thermistor
+
+R11 PULLUP_1 GPIO6_R_12 10.0k
+RT3 GPIO6_R_12 GND 10k ; NTC Thermistor
+
+R8 PULLUP_1 GPIO7_R_14 10.0k
+RT2 GPIO7_R_14 GND 10k ; NTC Thermistor
+
+R7 PULLUP_1 GPIO8_R_16 10.0k
+RT1 GPIO8_R_16 GND 10k ; NTC Thermistor
+
+* Note: TP44 is directly connected to GPIO1_R_4 in the schematic.
+
+* Model for Zener Diode
+.model D_ZENER_24V D (Is=1e-15 Rs=10 N=1 Bv=24 Ibv=1m)
+
+.ENDS SUBCKT_bq79616_subckt_001_s39

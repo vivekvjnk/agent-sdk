@@ -1,0 +1,45 @@
+* Subcircuit for bq79616_subckt_003_s40.png
+* This subcircuit captures the external interface and internal connections of populated components.
+
+* Assumptions:
+* - Components marked "DNP" (Do Not Populate) are omitted from the netlist.
+* - "DNP 0" ohm resistors (R10, R13, R17) are treated as open circuits.
+* - "DNP" capacitor (C11) is treated as an open circuit.
+* - External signals BBP, BBN, SRP_S, SRN_S are included as ports, even if their connections
+*   within this subcircuit are broken due to DNP components.
+
+.SUBCKT SUBCKT_bq79616_subckt_003_s40 BBP_CELL BBN_CELL BBP BBN SRP_S SRN_S TP_16 TP_17 TP_18 TP_19
+
+* Internal Nets
+.NET NET_R9_C10
+.NET NET_R12_C10
+
+* BBP/BBN Bus Bar Section
+* R9: 402 Ohm resistor between BBN_CELL and NET_R9_C10
+R9 BBN_CELL NET_R9_C10 402
+* R12: 402 Ohm resistor between BBP_CELL and NET_R12_C10
+R12 BBP_CELL NET_R12_C10 402
+* C10: 0.47uF capacitor between NET_R9_C10 and NET_R12_C10
+C10 NET_R9_C10 NET_R12_C10 0.47uF
+
+* R10 (DNP, 0 Ohm) and R13 (DNP, 0 Ohm) are omitted.
+* This means NET_R9_C10 is isolated from BBP, and NET_R12_C10 is isolated from BBN
+* within this subcircuit.
+
+* Test Point connections for BBP/BBN Bus Bar Section
+* TP16 connects directly to BBN_CELL
+E_TP16_BBN_CELL TP_16 BBN_CELL 0 1
+* TP17 connects directly to BBP_CELL
+E_TP17_BBP_CELL TP_17 BBP_CELL 0 1
+
+* SRP/SRN Current Sense Section
+* R17 (DNP, 0 Ohm) is omitted.
+* C11 (DNP, 0.47uF) is omitted.
+
+* Test Point connections for SRP/SRN Current Sense Section
+* TP18 connects directly to SRP_S
+E_TP18_SRP_S TP_18 SRP_S 0 1
+* TP19 connects directly to SRN_S
+E_TP19_SRN_S TP_19 SRN_S 0 1
+
+.ENDS SUBCKT_bq79616_subckt_003_s40

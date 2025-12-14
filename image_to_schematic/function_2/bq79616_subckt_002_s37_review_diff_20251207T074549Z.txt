@@ -1,0 +1,20 @@
+--- original
++++ reviewed
+@@ -14,7 +14,7 @@
+ * Internal Net Definitions
+ .NET PWR_R5_OUT
+ .NET LED_ANODE
+-.NET LED_CATHODE_J6_1
++
+ 
+ * Components
+ R5 PWR PWR_R5_OUT 30.0
+@@ -29,7 +29,7 @@
+ C9 REFHP_37 GND 1uF
+ 
+ R121 PWR_R5_OUT LED_ANODE 1.0k
+-D1 LED_ANODE LED_CATHODE_J6_1 D_LED_GREEN * Assuming a generic green LED model
++D1 LED_ANODE J6_PIN_1 D_LED_GREEN * Assuming a generic green LED model
+ 
+ * Connector J6
+ * J6_PIN_1 is an external port connected to D1 cathode.
