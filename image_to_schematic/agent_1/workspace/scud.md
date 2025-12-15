@@ -148,12 +148,12 @@ New connections related to BBP/BBN Bus Bar and SRP/SRN Current Sense:
 New connections for Isolation Interface (U2, J17, etc.):
 - **Digital Isolator U2 (ISO7342CQDWRQ1):**
   - **Power Connections:**
-    - VCC1 (Pin 1) is powered by USB2ANY_3.3V and decoupled by C57 (0.1uF) to GND_ISO.
-    - VCC2 (Pin 16) is powered by CVDD_CO and decoupled by C58 (0.1uF) to GND.
-    - GND1 (Pins 2, 8) form the isolated ground domain (GND_ISO).
-    - GND2 (Pins 9, 15) form the non-isolated ground domain (GND).
+    - VCC1 (Pin 1) is powered by USB2ANY_3.3V and decoupled by C57 (0.1uF) to GND_ISO.  **++**
+    - VCC2 (Pin 16) is powered by CVDD_CO and decoupled by C58 (0.1uF) to GND. **++**
+    - GND1 (Pins 2, 8) form the isolated ground domain (GND_ISO). **++**
+    - GND2 (Pins 9, 15) form the non-isolated ground domain (GND). **++**
   - **Isolated Signal Paths (Unidirectional):**
-    - INB (Pin 4, USB2ANY_TX_3.3) -> OUTB (Pin 13, 12TX).
+    - INB (Pin 4, USB2ANY_TX_3.3) -> OUTB (Pin 13, 12TX). **++**
     - INC (Pin 12, 12TX) -> OUTC (Pin 5, USB2ANY_RX_3.3).
     - IND (Pin 11, NF_J) -> OUTD (Pin 6, NFAULT_C).
     - INA (Pin 3, connected to GND_ISO via R123) -> OUTA (Pin 14, RX_CO).
