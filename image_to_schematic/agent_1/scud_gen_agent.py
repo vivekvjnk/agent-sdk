@@ -177,7 +177,7 @@ def run_scud_builder_pipeline(
     # Run Agent 1 (SCUD Builder)
     # ------------------------------------------------------------------
     
-    model = os.getenv("LLM_MODEL", "vertex_ai/gemini-2.5-flash")
+    model = os.getenv("LLM_MODEL", "vertex_ai/gemini-3-pro-preview")
     run_agent_1_scud_builder(
         schematic_image_urls=schematic_image_urls,
         workspace_root=workspace_root,
