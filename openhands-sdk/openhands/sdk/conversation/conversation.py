@@ -2,6 +2,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Self, overload
 
+if TYPE_CHECKING:
+    from openhands.sdk.conversation.event_filter_config import EventFilterConfig
+    from openhands.sdk.conversation.impl.local_conversation import LocalConversation
+    from openhands.sdk.conversation.impl.remote_conversation import RemoteConversation
+
 from openhands.sdk.agent.base import AgentBase
 from openhands.sdk.conversation.base import BaseConversation
 from openhands.sdk.conversation.types import (
@@ -18,11 +23,6 @@ from openhands.sdk.hooks import HookConfig
 from openhands.sdk.logger import get_logger
 from openhands.sdk.secret import SecretValue
 from openhands.sdk.workspace import LocalWorkspace, RemoteWorkspace
-
-
-if TYPE_CHECKING:
-    from openhands.sdk.conversation.impl.local_conversation import LocalConversation
-    from openhands.sdk.conversation.impl.remote_conversation import RemoteConversation
 
 logger = get_logger(__name__)
 
@@ -67,6 +67,7 @@ class Conversation:
             type[ConversationVisualizerBase] | ConversationVisualizerBase | None
         ) = DefaultConversationVisualizer,
         secrets: dict[str, SecretValue] | dict[str, str] | None = None,
+        event_filter_config: "EventFilterConfig | None" = None,
     ) -> "LocalConversation": ...
 
     @overload
@@ -109,6 +110,7 @@ class Conversation:
             type[ConversationVisualizerBase] | ConversationVisualizerBase | None
         ) = DefaultConversationVisualizer,
         secrets: dict[str, SecretValue] | dict[str, str] | None = None,
+        event_filter_config: "EventFilterConfig | None" = None,
     ) -> BaseConversation:
         from openhands.sdk.conversation.impl.local_conversation import LocalConversation
         from openhands.sdk.conversation.impl.remote_conversation import (
@@ -149,4 +151,5 @@ class Conversation:
             workspace=workspace,
             persistence_dir=persistence_dir,
             secrets=secrets,
+            event_filter_config=event_filter_config,
         )

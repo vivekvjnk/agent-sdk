@@ -2,6 +2,7 @@ import json
 import types
 from collections.abc import Sequence
 from typing import (
+    TYPE_CHECKING,
     Annotated,
     Any,
     Union,
@@ -9,6 +10,9 @@ from typing import (
     get_origin,
     overload,
 )
+
+if TYPE_CHECKING:
+    from openhands.sdk.conversation.event_filter_config import EventFilterConfig
 
 from openhands.sdk.context.condenser.base import CondenserBase
 from openhands.sdk.context.view import View
@@ -118,6 +122,7 @@ def prepare_llm_messages(
     condenser: None = None,
     additional_messages: list[Message] | None = None,
     llm: LLM | None = None,
+    event_filter_config: "EventFilterConfig | None" = None,
 ) -> list[Message]: ...
 
 
@@ -127,6 +132,7 @@ def prepare_llm_messages(
     condenser: CondenserBase,
     additional_messages: list[Message] | None = None,
     llm: LLM | None = None,
+    event_filter_config: "EventFilterConfig | None" = None,
 ) -> list[Message] | Condensation: ...
 
 
@@ -135,6 +141,7 @@ def prepare_llm_messages(
     condenser: CondenserBase | None = None,
     additional_messages: list[Message] | None = None,
     llm: LLM | None = None,
+    event_filter_config: "EventFilterConfig | None" = None,
 ) -> list[Message] | Condensation:
     """Prepare LLM messages from conversation context.
 
@@ -148,6 +155,8 @@ def prepare_llm_messages(
         additional_messages: Optional additional messages to append
         llm: Optional LLM instance from the agent, passed to condenser for
             token counting or other LLM features
+        event_filter_config: Optional configuration for filtering events to reduce
+            context bloat (e.g., stripping images from old observations)
 
     Returns:
         List of messages ready for LLM completion, or a Condensation event
@@ -159,6 +168,13 @@ def prepare_llm_messages(
 
     view = View.from_events(events)
     llm_convertible_events: list[LLMConvertibleEvent] = view.events
+
+    # Apply event filtering if configured (to reduce context bloat)
+    if event_filter_config is not None and event_filter_config.enabled:
+        from openhands.sdk.conversation.event_filter import EventFilter
+        
+        event_filter = EventFilter(event_filter_config)
+        llm_convertible_events = event_filter.filter_events(llm_convertible_events)
 
     # If a condenser is registered, we need to give it an
     # opportunity to transform the events. This will either

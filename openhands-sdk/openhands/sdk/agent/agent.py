@@ -158,7 +158,10 @@ class Agent(AgentBase):
 
         # Prepare LLM messages using the utility function
         _messages_or_condensation = prepare_llm_messages(
-            state.events, condenser=self.condenser, llm=self.llm
+            state.events,
+            condenser=self.condenser,
+            llm=self.llm,
+            event_filter_config=getattr(conversation, "_event_filter_config", None),
         )
 
         # Process condensation event before agent sampels another action

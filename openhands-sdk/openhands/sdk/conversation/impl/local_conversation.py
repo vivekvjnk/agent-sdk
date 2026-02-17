@@ -2,6 +2,10 @@ import atexit
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from openhands.sdk.conversation.event_filter_config import EventFilterConfig
 
 from openhands.sdk.agent.base import AgentBase
 from openhands.sdk.context.prompts.prompt import render_template
@@ -58,6 +62,7 @@ class LocalConversation(BaseConversation):
     llm_registry: LLMRegistry
     _cleanup_initiated: bool
     _hook_processor: HookEventProcessor | None
+    _event_filter_config: "EventFilterConfig | None"
 
     def __init__(
         self,
@@ -77,6 +82,7 @@ class LocalConversation(BaseConversation):
             type[ConversationVisualizerBase] | ConversationVisualizerBase | None
         ) = DefaultConversationVisualizer,
         secrets: Mapping[str, SecretValue] | None = None,
+        event_filter_config: "EventFilterConfig | None" = None,
         **_: object,
     ):
         """Initialize the conversation.
@@ -218,6 +224,9 @@ class LocalConversation(BaseConversation):
             # Convert dict[str, str] to dict[str, SecretValue]
             secret_values: dict[str, SecretValue] = {k: v for k, v in secrets.items()}
             self.update_secrets(secret_values)
+
+        # Store event filter config for use in message preparation
+        self._event_filter_config = event_filter_config
 
         atexit.register(self.close)
         self._start_observability_span(str(desired_id))
@@ -555,7 +564,9 @@ class LocalConversation(BaseConversation):
         )
 
         messages = prepare_llm_messages(
-            self.state.events, additional_messages=[user_message]
+            self.state.events,
+            additional_messages=[user_message],
+            event_filter_config=self._event_filter_config,
         )
 
         # Get or create the specialized ask-agent LLM
