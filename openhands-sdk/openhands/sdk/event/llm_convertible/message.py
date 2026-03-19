@@ -79,16 +79,34 @@ class MessageEvent(LLMConvertibleEvent):
         else:
             content.append("[no text content]")
 
+        # Display reasoning content first if available
+        if self.reasoning_content:
+            content.append("Reasoning:\n", style="bold")
+            content.append(self.reasoning_content)
+            content.append("\n\n")
+
+        # Display thinking blocks if available
+        if self.thinking_blocks:
+            content.append("Thinking:\n", style="bold")
+            for block in self.thinking_blocks:
+                if isinstance(block, ThinkingBlock):
+                    content.append(block.thinking)
+                elif isinstance(block, RedactedThinkingBlock):
+                    content.append("[Redacted Thinking]")
+                content.append("\n")
+            content.append("\n")
+
         # Responses API reasoning (plaintext only; never render encrypted_content)
         reasoning_item = self.llm_message.responses_reasoning_item
         if reasoning_item is not None:
-            content.append("\n\nReasoning:\n", style="bold")
+            content.append("Reasoning (Responses API):\n", style="bold")
             if reasoning_item.summary:
                 for s in reasoning_item.summary:
                     content.append(f"- {s}\n")
             if reasoning_item.content:
                 for b in reasoning_item.content:
                     content.append(f"{b}\n")
+            content.append("\n")
 
         # Add skill information if present
         if self.activated_skills:

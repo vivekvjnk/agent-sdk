@@ -40,7 +40,8 @@ class FileEditorAction(Action):
     old_str: str | None = Field(
         default=None,
         description="Required parameter of `str_replace` command containing the "
-        "string in `path` to replace.",
+        "string in `path` to replace."
+        "CRITICAL: Use the shortest unique string possible (3-5 lines). Avoid replacing large blocks (10+ lines) as this frequently causes 'verbatim match' errors."
     )
     new_str: str | None = Field(
         default=None,
@@ -52,7 +53,8 @@ class FileEditorAction(Action):
         default=None,
         ge=0,
         description="Required parameter of `insert` command. The `new_str` will "
-        "be inserted AFTER the line `insert_line` of `path`.",
+        "be inserted AFTER the line `insert_line` of `path`."
+        "PREFER THIS for adding closing tags or appending lines. It is more robust than str_replace because it doesn't require an exact string match for the entire block."
     )
     view_range: list[int] | None = Field(
         default=None,
@@ -183,6 +185,13 @@ CRITICAL REQUIREMENTS FOR USING THIS TOOL:
    - If not unique, the replacement will not be performed
 
 3. REPLACEMENT: The `new_str` parameter should contain the edited lines that replace the `old_str`. Both strings must be different.
+
+SURGICAL EDITING PROTOCOL:
+* NEVER replace more than 10 lines at once if you are only adding wrappers (like <group> tags).
+* To wrap a block: 
+  1. Use `str_replace` on the first line to add the opening tag.
+  2. Use `insert` at the end of the block to add the closing tag.
+* This minimizes 'verbatim match' failures and saves tokens.
 
 Remember: when making multiple file edits in a row to the same file, you should prefer to send all edits in a single message with multiple calls to this tool, rather than multiple messages with a single call each.
 """  # noqa: E501
