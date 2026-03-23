@@ -20,6 +20,7 @@ openhands-sdk = { workspace = true }
 openhands-tools = { workspace = true }
 openhands-workspace = { workspace = true }
 openhands-agent-server = { workspace = true }
+litellm = { path = "../../litellm", editable = true }
 
 [dependency-groups]
 dev = [
