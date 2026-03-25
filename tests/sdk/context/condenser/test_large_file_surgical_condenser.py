@@ -95,7 +95,7 @@ def test_condensation_triggered_for_large_text():
     assert isinstance(condensation, Condensation)
     assert condensation.forgotten_event_ids == ["large_obs"]
     assert condensation.summary_offset == 1
-    assert "[Surgical Condensation]" in condensation.summary
+    assert "[Condensation]Viewed" in condensation.summary
     assert "data (0.20KB)" in condensation.summary
 
 

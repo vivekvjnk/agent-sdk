@@ -9,8 +9,9 @@ from openhands.sdk.context.condenser.base import (
 )
 from openhands.sdk.context.view import View
 from openhands.sdk.event.condenser import Condensation
-from openhands.sdk.event.llm_convertible import ObservationEvent
+from openhands.sdk.event.llm_convertible import ActionEvent, ObservationEvent
 from openhands.sdk.llm import LLM, ImageContent, TextContent
+import os
 
 
 class LargeFileSurgicalCondenser(RollingCondenser):
@@ -86,9 +87,22 @@ class LargeFileSurgicalCondenser(RollingCondenser):
                             elif isinstance(content, TextContent):
                                 size_kb += len(content.text.encode("utf-8")) / 1024.0
 
-                        file_info = "image/data" if has_image else f"data ({size_kb:.2f}KB)"
-                        
-                        summary = f"[Surgical Condensation] Viewed {file_info}"
+                        # Attempt to find the filename from the preceding ActionEvent
+                        filename = ""
+                        for i in range(index - 1, -1, -1):
+                            prev_event = view.events[i]
+                            if isinstance(prev_event, ActionEvent) and prev_event.id == event.action_id:
+                                # We found the matching action. Extract the path.
+                                path = getattr(prev_event.action, "path", None)
+                                if path:
+                                    filename = f"{os.path.basename(path)}"
+                                break
+
+                        if filename:
+                            summary = f"[Condensation]Viewed {filename}"
+                        else:
+                            file_info = "image/data" if has_image else f"data ({size_kb:.2f}KB)"
+                            summary = f"[Condensation]Viewed {file_info}"
 
                         return Condensation(
                             forgotten_event_ids=[event.id],
