@@ -1,4 +1,4 @@
-from typing import Any
+import os
 
 from pydantic import Field
 
@@ -11,7 +11,6 @@ from openhands.sdk.context.view import View
 from openhands.sdk.event.condenser import Condensation
 from openhands.sdk.event.llm_convertible import ActionEvent, ObservationEvent
 from openhands.sdk.llm import LLM, ImageContent, TextContent
-import os
 
 
 class LargeFileSurgicalCondenser(RollingCondenser):
@@ -21,11 +20,15 @@ class LargeFileSurgicalCondenser(RollingCondenser):
     the 'file_editor' tool) and replaces them with a small summary string.
     This preserves KV cache efficiency by keeping the prefix stable and forcing early
     eviction of large branches.
-    param target_tool: Only condense observations from this tool (default: 'file_editor').
-    param threshold_bytes: For TextContent, the byte size threshold to trigger condensation (default: 10KB).
+    :param target_tool: Only condense observations from this tool
+        (default: 'file_editor').
+    :param threshold_bytes: For TextContent, the byte size threshold to
+        trigger condensation (default: 10KB).
     """
 
-    threshold_bytes: int = Field(default=10240)  # 10KB default threshold for condensation
+    threshold_bytes: int = Field(
+        default=10240
+    )  # 10KB default threshold for condensation
     target_tool: str = Field(default="file_editor")
 
     def _should_condense_event(self, event: ObservationEvent) -> bool:
@@ -33,12 +36,14 @@ class LargeFileSurgicalCondenser(RollingCondenser):
             return False
 
         current_bytes = 0
-        # TODO - Observation.content is a list of TextContent/ImageContent
-        # Some agents are capable of generating multiple tool calls to the FileEditorTool in one turn.
-        # Hence it's possible for an ObservationEvent to contain one or more bloated content blocks.
-        # our current logic simply condenses the entire ObservationEvent if first bloated content block is found, but we may want to consider a more surgical approach in the future where we only condense the bloated content block(s) and preserve the rest of the observation content if it's not bloated.
+        # Our current logic simply condenses the entire ObservationEvent if the
+        # first bloated content block is found, but we may want to consider a
+        # more surgical approach in the future where we only condense the
+        # bloated content block(s) and preserve the rest of the observation
+        # content if it's not bloated.
         for content in event.observation.content:
-            # If ImageContent, directly trigger condensation. No need to calculate size as images are always bloated for our purposes.
+            # If ImageContent, directly trigger condensation. No need to calculate size
+            # as images are always bloated for our purposes.
             if isinstance(content, ImageContent):
                 return True
             # If TextContent, check if it exceeds the byte threshold.
@@ -49,7 +54,7 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         return False
 
     def condensation_requirement(
-        self, view: View, agent_llm: LLM | None = None
+        self, view: View, _agent_llm: LLM | None = None
     ) -> CondensationRequirement | None:
         """Determines if a surgical condensation is required.
 
@@ -59,7 +64,7 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         """
         for index, event in enumerate(view.events):
             if isinstance(event, ObservationEvent):
-                # Only operate on events that are followed by another event 
+                # Only operate on events that are followed by another event
                 # (which implies the agent has seen and responded to it)
                 if index < len(view.events) - 1:
                     # Look ahead to see if the next event is an action from the agent
@@ -70,7 +75,7 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         return None
 
     def get_condensation(
-        self, view: View, agent_llm: LLM | None = None
+        self, view: View, _agent_llm: LLM | None = None
     ) -> Condensation:
         """Returns a Condensation object exactly matching the bloated event."""
         for index, event in enumerate(view.events):
@@ -91,7 +96,10 @@ class LargeFileSurgicalCondenser(RollingCondenser):
                         filename = ""
                         for i in range(index - 1, -1, -1):
                             prev_event = view.events[i]
-                            if isinstance(prev_event, ActionEvent) and prev_event.id == event.action_id:
+                            if (
+                                isinstance(prev_event, ActionEvent)
+                                and prev_event.id == event.action_id
+                            ):
                                 # We found the matching action. Extract the path.
                                 path = getattr(prev_event.action, "path", None)
                                 if path:
@@ -101,7 +109,9 @@ class LargeFileSurgicalCondenser(RollingCondenser):
                         if filename:
                             summary = f"[Condensation]Viewed {filename}"
                         else:
-                            file_info = "image/data" if has_image else f"data ({size_kb:.2f}KB)"
+                            file_info = (
+                                "image/data" if has_image else f"data ({size_kb:.2f}KB)"
+                            )
                             summary = f"[Condensation]Viewed {file_info}"
 
                         return Condensation(
@@ -117,7 +127,7 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         )
 
     def hard_context_reset(
-        self, view: View, agent_llm: LLM | None = None
+        self, _view: View, _agent_llm: LLM | None = None
     ) -> Condensation | None:
         """This condenser only performs surgical replacements."""
         return None

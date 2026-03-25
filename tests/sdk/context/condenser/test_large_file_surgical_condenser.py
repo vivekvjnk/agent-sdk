@@ -1,28 +1,31 @@
-import pytest
-from pydantic import Field
-from openhands.sdk.tool import (
-    Action,
-    Observation,
-)
 from openhands.sdk.context.condenser.base import CondensationRequirement
 from openhands.sdk.context.condenser.large_file_surgical_condenser import (
     LargeFileSurgicalCondenser,
 )
 from openhands.sdk.context.view import View
 from openhands.sdk.event.condenser import Condensation
-from openhands.sdk.event.llm_convertible import ActionEvent, MessageEvent, ObservationEvent
+from openhands.sdk.event.llm_convertible import (
+    ActionEvent,
+    MessageEvent,
+    ObservationEvent,
+)
 from openhands.sdk.llm import ImageContent, Message, MessageToolCall, TextContent
+from openhands.sdk.tool import (
+    Action,
+    Observation,
+)
+
 
 class DummyAction(Action):
     action_type: str = "dummy"
 
+
 class DummyObservation(Observation):
     pass
 
+
 def create_observation_event(
-    tool_name: str, 
-    content: list[TextContent | ImageContent], 
-    id: str = "obs1"
+    tool_name: str, content: list[TextContent | ImageContent], id: str = "obs1"
 ) -> ObservationEvent:
     return ObservationEvent(
         id=id,
@@ -33,6 +36,7 @@ def create_observation_event(
         observation=DummyObservation(content=content),
     )
 
+
 def create_action_event(id: str = "act1") -> ActionEvent:
     return ActionEvent(
         id=id,
@@ -42,7 +46,9 @@ def create_action_event(id: str = "act1") -> ActionEvent:
         llm_response_id="response_id_1",
         tool_call_id="call1",
         tool_name="dummy_tool",
-        tool_call=MessageToolCall(id="call1", name="dummy_tool", arguments="{}", origin="completion"),
+        tool_call=MessageToolCall(
+            id="call1", name="dummy_tool", arguments="{}", origin="completion"
+        ),
     )
 
 
@@ -50,16 +56,16 @@ def create_agent_event(id: str = "msg2") -> MessageEvent:
     return MessageEvent(
         id=id,
         source="agent",
-        llm_message=Message(role="assistant", content=[TextContent(text="Thinking...")]),
+        llm_message=Message(
+            role="assistant", content=[TextContent(text="Thinking...")]
+        ),
     )
 
 
 def test_no_condensation_if_wrong_tool():
     condenser = LargeFileSurgicalCondenser(threshold_bytes=100)
     act_event = create_action_event()
-    obs_event = create_observation_event(
-        "other_tool", [TextContent(text="A" * 200)]
-    )
+    obs_event = create_observation_event("other_tool", [TextContent(text="A" * 200)])
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
 
@@ -69,9 +75,7 @@ def test_no_condensation_if_wrong_tool():
 def test_no_condensation_if_size_below_threshold():
     condenser = LargeFileSurgicalCondenser(threshold_bytes=100)
     act_event = create_action_event()
-    obs_event = create_observation_event(
-        "file_editor", [TextContent(text="A" * 50)]
-    )
+    obs_event = create_observation_event("file_editor", [TextContent(text="A" * 50)])
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
 
@@ -103,7 +107,9 @@ def test_condensation_triggered_for_image_content():
     condenser = LargeFileSurgicalCondenser()
     act_event = create_action_event()
     obs_event = create_observation_event(
-        "file_editor", [ImageContent(image_urls=["data:image/png;base64,123"])], id="img_obs"
+        "file_editor",
+        [ImageContent(image_urls=["data:image/png;base64,123"])],
+        id="img_obs",
     )
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
@@ -119,9 +125,7 @@ def test_no_condensation_if_last_event():
     # If the observation is the very last event, we shouldn't condense yet
     condenser = LargeFileSurgicalCondenser(threshold_bytes=100)
     act_event = create_action_event()
-    obs_event = create_observation_event(
-        "file_editor", [TextContent(text="A" * 200)]
-    )
+    obs_event = create_observation_event("file_editor", [TextContent(text="A" * 200)])
     view = View.from_events([act_event, obs_event])
 
     assert condenser.condensation_requirement(view) is None
