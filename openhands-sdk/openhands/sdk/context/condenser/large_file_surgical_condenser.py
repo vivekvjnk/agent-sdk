@@ -54,7 +54,7 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         return False
 
     def condensation_requirement(
-        self, view: View, _agent_llm: LLM | None = None
+        self, view: View, agent_llm: LLM | None = None
     ) -> CondensationRequirement | None:
         """Determines if a surgical condensation is required.
 
@@ -75,7 +75,7 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         return None
 
     def get_condensation(
-        self, view: View, _agent_llm: LLM | None = None
+        self, view: View, agent_llm: LLM | None = None
     ) -> Condensation:
         """Returns a Condensation object exactly matching the bloated event."""
         for index, event in enumerate(view.events):
