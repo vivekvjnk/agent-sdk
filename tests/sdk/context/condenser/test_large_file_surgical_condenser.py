@@ -1,9 +1,7 @@
-from openhands.sdk.context.condenser.base import CondensationRequirement
 from openhands.sdk.context.condenser.large_file_surgical_condenser import (
     LargeFileSurgicalCondenser,
 )
 from openhands.sdk.context.view import View
-from openhands.sdk.event.condenser import Condensation
 from openhands.sdk.event.llm_convertible import (
     ActionEvent,
     MessageEvent,
@@ -69,7 +67,8 @@ def test_no_condensation_if_wrong_tool():
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
 
-    assert condenser.condensation_requirement(view) is None
+    result = condenser.condense(view)
+    assert result == view
 
 
 def test_no_condensation_if_size_below_threshold():
@@ -79,7 +78,8 @@ def test_no_condensation_if_size_below_threshold():
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
 
-    assert condenser.condensation_requirement(view) is None
+    result = condenser.condense(view)
+    assert result == view
 
 
 def test_condensation_triggered_for_large_text():
@@ -91,16 +91,20 @@ def test_condensation_triggered_for_large_text():
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
 
-    # Should trigger HARD condensation
-    assert condenser.condensation_requirement(view) == CondensationRequirement.HARD
-
-    # Get condensation should return correct info
-    condensation = condenser.get_condensation(view)
-    assert isinstance(condensation, Condensation)
-    assert condensation.forgotten_event_ids == ["large_obs"]
-    assert condensation.summary_offset == 1
-    assert "[Condensation]Viewed" in condensation.summary
-    assert "data (0.20KB)" in condensation.summary
+    result = condenser.condense(view)
+    assert isinstance(result, View)
+    assert len(result.events) == 3
+    
+    condensed_obs = result.events[1]
+    assert isinstance(condensed_obs, ObservationEvent)
+    assert condensed_obs.id == "large_obs"
+    assert "[Condensation]Viewed" in condensed_obs.observation.content[0].text
+    assert "data (0.20KB)" in condensed_obs.observation.content[0].text
+    
+    # Verify pairing is preserved
+    assert condensed_obs.tool_name == obs_event.tool_name
+    assert condensed_obs.tool_call_id == obs_event.tool_call_id
+    assert condensed_obs.action_id == obs_event.action_id
 
 
 def test_condensation_triggered_for_image_content():
@@ -114,11 +118,12 @@ def test_condensation_triggered_for_image_content():
     msg_event = create_agent_event()
     view = View.from_events([act_event, obs_event, msg_event])
 
-    assert condenser.condensation_requirement(view) == CondensationRequirement.HARD
-
-    condensation = condenser.get_condensation(view)
-    assert condensation.forgotten_event_ids == ["img_obs"]
-    assert "image/data" in condensation.summary
+    result = condenser.condense(view)
+    assert isinstance(result, View)
+    condensed_obs = result.events[1]
+    assert isinstance(condensed_obs, ObservationEvent)
+    assert condensed_obs.id == "img_obs"
+    assert "image/data" in condensed_obs.observation.content[0].text
 
 
 def test_no_condensation_if_last_event():
@@ -128,4 +133,5 @@ def test_no_condensation_if_last_event():
     obs_event = create_observation_event("file_editor", [TextContent(text="A" * 200)])
     view = View.from_events([act_event, obs_event])
 
-    assert condenser.condensation_requirement(view) is None
+    result = condenser.condense(view)
+    assert result == view
