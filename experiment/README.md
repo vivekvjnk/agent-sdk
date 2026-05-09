@@ -4,7 +4,7 @@
 To validate whether the `openhands-software-agent-sdk` maintains a consistent MCP session ID across multiple tool calls when using the Model Context Protocol (MCP) in **Streamable HTTP** mode.
 
 ## Methodology
-The experiment uses a custom MCP server and an agent script to track session continuity.
+The experiment uses a custom MCP server and an agent script to track session continuity. Our approach follows empirical engineering research standards, including hypothesis formulation, controlled variables, and documented reproducibility. See the [Scientific Research Standard Review](./scientific_standard_review.md) for a detailed evaluation.
 
 ### 1. MCP Server Setup
 A `fastmcp` server was implemented that:
