@@ -48,3 +48,10 @@ In Streamable HTTP mode, the SDK harness (via `fastmcp` and `mcp` libraries) exp
 The `openhands-software-agent-sdk` successfully maintains MCP session state across tool calls. This is because the `MCPClient` is initialized once per `Agent` instance and the underlying transport session is preserved for the duration of the conversation.
 
 This validation confirms that stateful MCP tools (such as persistent terminal sessions) can be reliably implemented using the SDK's existing MCP integration.
+
+## Experiment 02: Persistent Terminal Sessions
+This experiment validated that host-side terminal processes can be correctly reused across agent tool calls by mapping the MCP session ID to a `TerminalExecutor` instance.
+
+- **Status**: SUCCESS
+- **Key Outcome**: Environment variables and shell state are preserved across sequential `conversation.run()` steps.
+- **Detailed Report**: [02_terminal_persistence_report.md](./02_terminal_persistence_report.md)
