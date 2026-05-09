@@ -3,6 +3,7 @@ from pydantic import SecretStr
 from openhands.sdk import (
     LLM,
     Agent,
+    AgentContext,
     Conversation,
 )
 from openhands.sdk.event import MessageEvent
@@ -10,7 +11,7 @@ from openhands.sdk.event import MessageEvent
 def get_last_agent_message(conversation):
     for event in reversed(conversation.state.events):
         if isinstance(event, MessageEvent) and event.source == "agent":
-            return event.text
+            return event.llm_message.content
     return "No response from agent."
 
 def run_experiment():
@@ -37,8 +38,9 @@ def run_experiment():
 
     # 2. Initialize Agent
     agent = Agent(
-        name="Terminal-Experiment-Agent",
-        instructions="You are an agent testing terminal session persistence. Execute commands as requested.",
+        agent_context=AgentContext(
+            system_message_suffix="You are an agent testing terminal session persistence. Execute commands as requested."
+            ),
         llm=llm,
         mcp_config=mcp_config
     )

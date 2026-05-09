@@ -55,3 +55,10 @@ This experiment validated that host-side terminal processes can be correctly reu
 - **Status**: SUCCESS
 - **Key Outcome**: Environment variables and shell state are preserved across sequential `conversation.run()` steps.
 - **Detailed Report**: [02_terminal_persistence_report.md](./02_terminal_persistence_report.md)
+
+## Experiment 03: Multi-Agent Session Isolation
+This experiment confirmed that the MCP server can manage multiple isolated terminal sessions for different agents concurrently.
+
+- **Status**: SUCCESS
+- **Key Outcome**: Each agent has its own persistent shell; variables set by one agent are not visible to others.
+- **Detailed Report**: [03_multi_agent_isolation_report.md](./03_multi_agent_isolation_report.md)
