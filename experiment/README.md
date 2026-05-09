@@ -62,3 +62,10 @@ This experiment confirmed that the MCP server can manage multiple isolated termi
 - **Status**: SUCCESS
 - **Key Outcome**: Each agent has its own persistent shell; variables set by one agent are not visible to others.
 - **Detailed Report**: [03_multi_agent_isolation_report.md](./03_multi_agent_isolation_report.md)
+
+## Experiment 04: Concurrent Requests Handling
+This experiment validated that the terminal server can process simultaneous requests from different agents without blocking.
+
+- **Status**: SUCCESS
+- **Key Outcome**: Two 10-second tasks were completed in ~17.5 seconds, proving parallel execution.
+- **Detailed Report**: [04_concurrent_requests_report.md](./04_concurrent_requests_report.md)
