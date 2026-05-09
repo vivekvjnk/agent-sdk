@@ -1,0 +1,19 @@
+2026-05-09 13:03:00,939 - HTTP Request: GET https://pypi.org/pypi/fastmcp/json "HTTP/1.1 200 OK"
+2026-05-09 13:03:37,046 - Processing request of type ListToolsRequest
+2026-05-09 13:04:06,343 - Processing request of type CallToolRequest
+2026-05-09 13:04:06,350 - Tool called. Session ID: a9bc3c46-0165-4807-a7a3-856b643a6af5
+2026-05-09 13:04:06,350 - Headers: {'host': 'localhost:8000', 'accept': '*/*', 'accept-encoding': 'gzip, deflate', 'connection': 'keep-alive', 'user-agent': 'python-httpx/0.28.1', 'content-length': '124', 'content-type': 'application/json'}
+2026-05-09 13:04:19,289 - Processing request of type CallToolRequest
+2026-05-09 13:04:19,291 - Tool called. Session ID: a9bc3c46-0165-4807-a7a3-856b643a6af5
+2026-05-09 13:04:19,291 - Headers: {'host': 'localhost:8000', 'accept': '*/*', 'accept-encoding': 'gzip, deflate', 'connection': 'keep-alive', 'user-agent': 'python-httpx/0.28.1', 'content-length': '124', 'content-type': 'application/json'}
+2026-05-09 13:07:03,274 - StreamableHTTP session manager started
+2026-05-09 13:07:50,434 - Created new transport with session ID: 4a616396c284447ca74d22e7d382781b
+2026-05-09 13:07:50,453 - Processing request of type ListToolsRequest
+2026-05-09 13:08:00,334 - Processing request of type CallToolRequest
+2026-05-09 13:08:00,336 - Tool called. Session ID: 4a616396c284447ca74d22e7d382781b
+2026-05-09 13:08:00,337 - Transport: streamable-http
+2026-05-09 13:08:00,337 - Headers: {'host': 'localhost:8000', 'accept-encoding': 'gzip, deflate', 'connection': 'keep-alive', 'user-agent': 'python-httpx/0.28.1', 'accept': 'application/json, text/event-stream', 'content-type': 'application/json', 'mcp-session-id': '4a616396c284447ca74d22e7d382781b', 'mcp-protocol-version': '2025-11-25', 'content-length': '124'}
+2026-05-09 13:08:04,676 - Processing request of type CallToolRequest
+2026-05-09 13:08:04,677 - Tool called. Session ID: 4a616396c284447ca74d22e7d382781b
+2026-05-09 13:08:04,677 - Transport: streamable-http
+2026-05-09 13:08:04,677 - Headers: {'host': 'localhost:8000', 'accept-encoding': 'gzip, deflate', 'connection': 'keep-alive', 'user-agent': 'python-httpx/0.28.1', 'accept': 'application/json, text/event-stream', 'content-type': 'application/json', 'mcp-session-id': '4a616396c284447ca74d22e7d382781b', 'mcp-protocol-version': '2025-11-25', 'content-length': '124'}
