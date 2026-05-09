@@ -83,9 +83,9 @@ async def run_experiment():
     
     # If they were sequential, it would be > 20s (since each takes 10s + LLM overhead)
     if total_time < 18: 
-        print("SUCCESS: Tasks ran concurrently!")
+        print(f"SUCCESS: Tasks ran concurrently! Total time: {total_time:.2f}s")
     else:
-        print("FAILURE: Tasks appeared to run sequentially.")
+        print(f"FAILURE: Tasks did not appear to run concurrently. Total time: {total_time:.2f}s")
 
     print("\n--- Experiment Finished ---")
 
