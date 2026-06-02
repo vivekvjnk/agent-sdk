@@ -5,6 +5,12 @@ These are built in and are *required* for the agent to work.
 For tools that require interacting with the environment, add them to `openhands-tools`.
 """
 
+from openhands.sdk.tool.builtins.escalate import (
+    EscalateAction,
+    EscalateExecutor,
+    EscalateObservation,
+    EscalateTool,
+)
 from openhands.sdk.tool.builtins.finish import (
     FinishAction,
     FinishExecutor,
@@ -19,7 +25,7 @@ from openhands.sdk.tool.builtins.think import (
 )
 
 
-BUILT_IN_TOOLS = [FinishTool, ThinkTool]
+BUILT_IN_TOOLS = [FinishTool, ThinkTool, EscalateTool]
 
 # Mapping of built-in tool class names to their classes, generated dynamically
 BUILT_IN_TOOL_CLASSES = {tool.__name__: tool for tool in BUILT_IN_TOOLS}
@@ -35,4 +41,8 @@ __all__ = [
     "ThinkAction",
     "ThinkObservation",
     "ThinkExecutor",
+    "EscalateTool",
+    "EscalateAction",
+    "EscalateObservation",
+    "EscalateExecutor",
 ]

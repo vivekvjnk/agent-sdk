@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from openhands.sdk.agent.agent import _ActionBatch
-from openhands.sdk.event import ActionEvent, ObservationEvent
+from openhands.sdk.event import ActionEvent, ObservationEvent, TaskEscalatedEvent
 from openhands.sdk.event.llm_convertible import UserRejectObservation
 from openhands.sdk.tool.builtins import FinishTool
 
@@ -137,6 +137,7 @@ def test_emit_results_in_order():
     batch = _ActionBatch(
         action_events=events,
         has_finish=False,
+        has_escalation=False,
         results_by_id={"1": [o1], "2": [o2a, o2b]},
     )
     emitted: list[Any] = []
@@ -150,6 +151,7 @@ def test_emit_blocked_produces_rejection():
     batch = _ActionBatch(
         action_events=events,
         has_finish=False,
+        has_escalation=False,
         blocked_reasons={"1": "policy"},
         results_by_id={"2": [o2]},
     )
@@ -166,14 +168,19 @@ def test_emit_blocked_produces_rejection():
 
 
 def test_finalize_noop_when_no_finish():
-    batch = _ActionBatch(action_events=[_ae("a", "1")], has_finish=False)
+    batch = _ActionBatch(
+        action_events=[_ae("a", "1")], has_finish=False, has_escalation=False
+    )
     finished: list[bool] = []
+    paused: list[bool] = []
     batch.finalize(
         on_event=lambda e: None,
         check_iterative_refinement=lambda ae: (False, None),
         mark_finished=lambda: finished.append(True),
+        mark_paused=lambda: paused.append(True),
     )
     assert finished == []
+    assert paused == []
 
 
 def test_finalize_marks_finished():
@@ -181,15 +188,19 @@ def test_finalize_marks_finished():
     batch = _ActionBatch(
         action_events=events,
         has_finish=True,
+        has_escalation=False,
         results_by_id={"1": [_obs("o")]},
     )
     finished: list[bool] = []
+    paused: list[bool] = []
     batch.finalize(
         on_event=lambda e: None,
         check_iterative_refinement=lambda ae: (False, None),
         mark_finished=lambda: finished.append(True),
+        mark_paused=lambda: paused.append(True),
     )
     assert finished == [True]
+    assert paused == []
 
 
 def test_finalize_emits_followup_on_refinement():
@@ -197,6 +208,7 @@ def test_finalize_emits_followup_on_refinement():
     batch = _ActionBatch(
         action_events=events,
         has_finish=True,
+        has_escalation=False,
         results_by_id={"1": [_obs("o")]},
     )
     emitted: list[Any] = []
@@ -204,6 +216,7 @@ def test_finalize_emits_followup_on_refinement():
         on_event=emitted.append,
         check_iterative_refinement=lambda ae: (True, "try again"),
         mark_finished=lambda: None,
+        mark_paused=lambda: None,
     )
     assert len(emitted) == 1
     assert emitted[0].llm_message.content[0].text == "try again"
@@ -214,12 +227,42 @@ def test_finalize_noop_when_finish_blocked():
     batch = _ActionBatch(
         action_events=events,
         has_finish=True,
+        has_escalation=False,
         blocked_reasons={"1": "denied"},
     )
     finished: list[bool] = []
+    paused: list[bool] = []
     batch.finalize(
         on_event=lambda e: None,
         check_iterative_refinement=lambda ae: (False, None),
         mark_finished=lambda: finished.append(True),
+        mark_paused=lambda: paused.append(True),
     )
     assert finished == []
+    assert paused == []
+
+
+def test_finalize_marks_paused_on_escalation():
+    from openhands.sdk.tool.builtins import EscalateAction, EscalateTool
+
+    ae = _ae(EscalateTool.name, "1")
+    ae.action = EscalateAction(message="I need help")
+    batch = _ActionBatch(
+        action_events=[ae],
+        has_finish=False,
+        has_escalation=True,
+        results_by_id={"1": [_obs("o")]},
+    )
+    finished: list[bool] = []
+    paused: list[bool] = []
+    emitted: list[Any] = []
+    batch.finalize(
+        on_event=emitted.append,
+        check_iterative_refinement=lambda ae: (False, None),
+        mark_finished=lambda: finished.append(True),
+        mark_paused=lambda: paused.append(True),
+    )
+    assert finished == []
+    assert paused == [True]
+    assert len(emitted) == 1
+    assert isinstance(emitted[0], TaskEscalatedEvent)
