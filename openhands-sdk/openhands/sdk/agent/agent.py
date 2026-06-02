@@ -29,6 +29,7 @@ from openhands.sdk.event import (
     MessageEvent,
     ObservationEvent,
     SystemPromptEvent,
+    TaskEscalatedEvent,
     TokenEvent,
     UserRejectObservation,
 )
@@ -62,6 +63,8 @@ from openhands.sdk.tool import (
     Observation,
 )
 from openhands.sdk.tool.builtins import (
+    EscalateAction,
+    EscalateTool,
     FinishAction,
     FinishTool,
     ThinkAction,
@@ -89,6 +92,7 @@ class _ActionBatch:
 
     action_events: list[ActionEvent]
     has_finish: bool
+    has_escalation: bool
     blocked_reasons: dict[str, str] = field(default_factory=dict)
     results_by_id: dict[str, list[Event]] = field(default_factory=dict)
 
@@ -120,6 +124,34 @@ class _ActionBatch:
             )
         return action_events[: finish_idx + 1], True
 
+    @staticmethod
+    def _truncate_at_escalate(
+        action_events: list[ActionEvent],
+    ) -> tuple[list[ActionEvent], bool]:
+        """
+        Return (events[:escalate+1], True) or (events, False).
+        Discards and logs any calls after EscalateTool.
+        """
+        escalate_idx = next(
+            (
+                i
+                for i, ae in enumerate(action_events)
+                if ae.tool_name == EscalateTool.name
+            ),
+            None,
+        )
+        if escalate_idx is None:
+            return action_events, False
+
+        discarded = action_events[escalate_idx + 1 :]
+        if discarded:
+            names = [ae.tool_name for ae in discarded]
+            logger.warning(
+                f"Discarding {len(discarded)} tool call(s) "
+                f"after EscalateTool: {', '.join(names)}"
+            )
+        return action_events[: escalate_idx + 1], True
+
     @classmethod
     def prepare(
         cls,
@@ -130,6 +162,7 @@ class _ActionBatch:
     ) -> "_ActionBatch":
         """Truncate, partition blocked actions, execute the rest, return the batch."""
         action_events, has_finish = cls._truncate_at_finish(action_events)
+        action_events, has_escalation = cls._truncate_at_escalate(action_events)
 
         blocked_reasons: dict[str, str] = {}
         executable: list[ActionEvent] = []
@@ -146,6 +179,7 @@ class _ActionBatch:
         return cls(
             action_events=action_events,
             has_finish=has_finish,
+            has_escalation=has_escalation,
             blocked_reasons=blocked_reasons,
             results_by_id=results_by_id,
         )
@@ -174,8 +208,9 @@ class _ActionBatch:
         on_event: ConversationCallbackType,
         check_iterative_refinement: Callable[[ActionEvent], tuple[bool, str | None]],
         mark_finished: Callable[[], None],
+        mark_paused: Callable[[], None],
     ) -> None:
-        """Transition state after FinishTool, or inject iterative-refinement followup.
+        """Transition state after FinishTool or EscalateTool.
 
         Args:
             on_event: Callback for emitting events.
@@ -183,7 +218,21 @@ class _ActionBatch:
                 for a FinishTool action event.
             mark_finished: Called to set the conversation execution status
                 to FINISHED when the agent is done.
+            mark_paused: Called to set the conversation execution status
+                to PAUSED when the agent escalates.
         """
+        # Handle escalation first as it takes precedence over finish if both present
+        # (though truncation should have handled it if they were in the same batch)
+        if (
+            self.has_escalation
+            and self.action_events[-1].id not in self.blocked_reasons
+        ):
+            action = self.action_events[-1].action
+            if isinstance(action, EscalateAction):
+                on_event(TaskEscalatedEvent(message=action.message))
+            mark_paused()
+            return
+
         # Nothing to finalise: no FinishTool, or it was blocked by a hook.
         if not self.has_finish or self.action_events[-1].id in self.blocked_reasons:
             return
@@ -418,6 +467,11 @@ class Agent(CriticMixin, AgentBase):
                 state,
                 "execution_status",
                 ConversationExecutionStatus.FINISHED,
+            ),
+            mark_paused=lambda: setattr(
+                state,
+                "execution_status",
+                ConversationExecutionStatus.PAUSED,
             ),
         )
 

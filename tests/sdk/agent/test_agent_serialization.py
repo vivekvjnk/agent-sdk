@@ -234,7 +234,11 @@ def test_include_default_tools_serialization_default() -> None:
 
     # Default should include both FinishTool and ThinkTool as strings
     assert "include_default_tools" in agent_dict
-    assert set(agent_dict["include_default_tools"]) == {"FinishTool", "ThinkTool"}
+    assert set(agent_dict["include_default_tools"]) == {
+        "FinishTool",
+        "ThinkTool",
+        "EscalateTool",
+    }
 
 
 def test_include_default_tools_serialization_empty() -> None:
@@ -282,7 +286,11 @@ def test_include_default_tools_deserialization_roundtrip() -> None:
 def test_include_default_tools_deserialization_all_tools() -> None:
     """Test that include_default_tools deserializes correctly with all tools."""
     llm = LLM(model="test-model", usage_id="test-llm")
-    agent = Agent(llm=llm, tools=[], include_default_tools=["FinishTool", "ThinkTool"])
+    agent = Agent(
+        llm=llm,
+        tools=[],
+        include_default_tools=["FinishTool", "ThinkTool", "EscalateTool"],
+    )
 
     # Serialize to JSON
     agent_json = agent.model_dump_json()
@@ -292,7 +300,11 @@ def test_include_default_tools_deserialization_all_tools() -> None:
 
     # Should have both tools
     assert isinstance(deserialized_agent, Agent)
-    assert set(deserialized_agent.include_default_tools) == {"FinishTool", "ThinkTool"}
+    assert set(deserialized_agent.include_default_tools) == {
+        "FinishTool",
+        "ThinkTool",
+        "EscalateTool",
+    }
 
 
 def test_include_default_tools_deserialization_empty() -> None:
