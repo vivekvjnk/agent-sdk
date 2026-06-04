@@ -1,10 +1,10 @@
 """Callback for monitoring observation drift during replay."""
 
 import json
-from typing import Any
 
 from openhands.sdk.event import Event, ObservationEvent
 from openhands.sdk.logger import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,9 @@ class ObservationDriftCallback:
         if self.drift_log_path:
             drift = "No drift"
             if not expected:
-                drift = "Drift detected: No expected observation found for this tool call."
+                drift = (
+                    "Drift detected: No expected observation found for this tool call."
+                )
             else:
                 # Basic drift check logic
                 if self._check_drift([event], expected):

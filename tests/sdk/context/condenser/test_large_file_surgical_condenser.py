@@ -16,11 +16,11 @@ from openhands.sdk.tool import (
 )
 
 
-class DummyAction(Action):
+class CondenserDummyAction(Action):
     action_type: str = "dummy"
 
 
-class DummyObservation(Observation):
+class CondenserDummyObservation(Observation):
     pass
 
 
@@ -33,7 +33,7 @@ def create_observation_event(
         tool_name=tool_name,
         tool_call_id="call1",
         action_id="act1",
-        observation=DummyObservation(content=content),
+        observation=CondenserDummyObservation(content=content),
     )
 
 
@@ -41,7 +41,7 @@ def create_action_event(id: str = "act1") -> ActionEvent:
     return ActionEvent(
         id=id,
         source="agent",
-        action=DummyAction(),
+        action=CondenserDummyAction(),
         thought=[TextContent(text="Thinking...")],
         llm_response_id="response_id_1",
         tool_call_id="call1",
@@ -99,6 +99,7 @@ def test_condensation_triggered_for_large_text():
     assert isinstance(condensation, Condensation)
     assert condensation.forgotten_event_ids == ["large_obs"]
     assert condensation.summary_offset == 1
+    assert condensation.summary is not None
     assert "[Condensation]Viewed" in condensation.summary
     assert "data (0.20KB)" in condensation.summary
 
@@ -118,6 +119,7 @@ def test_condensation_triggered_for_image_content():
 
     condensation = condenser.get_condensation(view)
     assert condensation.forgotten_event_ids == ["img_obs"]
+    assert condensation.summary is not None
     assert "image/data" in condensation.summary
 
 

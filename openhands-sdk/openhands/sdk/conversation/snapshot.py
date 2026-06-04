@@ -2,7 +2,6 @@
 
 import os
 import uuid
-from typing import Any
 
 from openhands.sdk.conversation.event_store import EventLog
 from openhands.sdk.conversation.persistence_const import EVENTS_DIR
@@ -10,6 +9,7 @@ from openhands.sdk.event import ActionEvent, Event, MessageEvent, ObservationEve
 from openhands.sdk.io import LocalFileStore
 from openhands.sdk.llm.message import Message
 from openhands.sdk.logger import get_logger
+
 
 logger = get_logger(__name__)
 

@@ -54,7 +54,9 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         return False
 
     def condensation_requirement(
-        self, view: View, agent_llm: LLM | None = None
+        self,
+        view: View,
+        agent_llm: LLM | None = None,  # noqa: ARG002
     ) -> CondensationRequirement | None:
         """Determines if a surgical condensation is required.
 
@@ -75,7 +77,9 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         return None
 
     def get_condensation(
-        self, view: View, agent_llm: LLM | None = None
+        self,
+        view: View,
+        agent_llm: LLM | None = None,  # noqa: ARG002
     ) -> Condensation:
         """Returns a Condensation object exactly matching the bloated event."""
         for index, event in enumerate(view.events):
@@ -127,7 +131,9 @@ class LargeFileSurgicalCondenser(RollingCondenser):
         )
 
     def hard_context_reset(
-        self, _view: View, _agent_llm: LLM | None = None
+        self,
+        view: View,  # noqa: ARG002
+        agent_llm: LLM | None = None,  # noqa: ARG002
     ) -> Condensation | None:
         """This condenser only performs surgical replacements."""
         return None

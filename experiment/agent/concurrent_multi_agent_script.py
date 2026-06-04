@@ -1,7 +1,9 @@
 import asyncio
 import os
 import time
+
 from pydantic import SecretStr
+
 from openhands.sdk import (
     LLM,
     Agent,
@@ -10,11 +12,13 @@ from openhands.sdk import (
 )
 from openhands.sdk.event import MessageEvent
 
+
 def get_last_agent_message(conversation):
     for event in reversed(conversation.state.events):
         if isinstance(event, MessageEvent) and event.source == "agent":
             return event.llm_message.content
     return "No response from agent."
+
 
 async def run_agent_task(name, agent, command):
     print(f"[{name}] Starting task: {command}")
@@ -25,8 +29,20 @@ async def run_agent_task(name, agent, command):
     await asyncio.to_thread(conv.run)
     end_time = time.time()
     response = get_last_agent_message(conv)
-    print(f"[{name}] Finished in {end_time - start_time:.2f}s. Response: {response.strip()}")
-    return response
+    # Extract text from content if it's a list
+    if isinstance(response, list):
+        response_text = " ".join(
+            [getattr(c, "text", "") for c in response if hasattr(c, "text")]
+        )
+    else:
+        response_text = str(response)
+
+    print(
+        f"[{name}] Finished in {end_time - start_time:.2f}s. "
+        f"Response: {response_text.strip()}"
+    )
+    return response_text
+
 
 async def run_experiment():
     # 0. Setup LLM
@@ -45,7 +61,7 @@ async def run_experiment():
         "mcpServers": {
             "terminal-session-server": {
                 "url": "http://localhost:8801/mcp",
-                "transport": "streamable-http"
+                "transport": "streamable-http",
             }
         }
     }
@@ -54,40 +70,44 @@ async def run_experiment():
     agent1 = Agent(
         agent_context=AgentContext(system_message_suffix="You are Agent 1."),
         llm=llm,
-        mcp_config=mcp_config
+        mcp_config=mcp_config,
     )
-    
+
     agent2 = Agent(
         agent_context=AgentContext(system_message_suffix="You are Agent 2."),
         llm=llm,
-        mcp_config=mcp_config
+        mcp_config=mcp_config,
     )
 
     print("\n--- Starting Concurrent Multi-Agent Experiment ---")
     print("Both agents will run a 10-second sleep command simultaneously.")
-    
+
     # We want them to actually run the bash command in parallel.
     command1 = "Run 'sleep 10 && echo Agent-1-Finished'"
     command2 = "Run 'sleep 10 && echo Agent-2-Finished'"
 
     start = time.time()
-    
+
     # Run both agents concurrently
-    results = await asyncio.gather(
+    await asyncio.gather(
         run_agent_task("Agent 1", agent1, command1),
-        run_agent_task("Agent 2", agent2, command2)
+        run_agent_task("Agent 2", agent2, command2),
     )
-    
+
     total_time = time.time() - start
     print(f"\nTotal elapsed time for both 10s tasks: {total_time:.2f}s")
-    
+
     # If they were sequential, it would be > 20s (since each takes 10s + LLM overhead)
-    if total_time < 18: 
+    if total_time < 18:
         print(f"SUCCESS: Tasks ran concurrently! Total time: {total_time:.2f}s")
     else:
-        print(f"FAILURE: Tasks did not appear to run concurrently. Total time: {total_time:.2f}s")
+        print(
+            "FAILURE: Tasks did not appear to run concurrently. "
+            f"Total time: {total_time:.2f}s"
+        )
 
     print("\n--- Experiment Finished ---")
+
 
 if __name__ == "__main__":
     asyncio.run(run_experiment())

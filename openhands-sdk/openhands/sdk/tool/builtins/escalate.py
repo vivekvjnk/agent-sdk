@@ -24,12 +24,7 @@ class EscalateAction(Action):
     temporarily suspend autonomous execution.
     """
 
-    message: str = Field(
-        description=(
-            "Escalation message to surface "
-            "to the caller."
-        )
-    )
+    message: str = Field(description=("Escalation message to surface to the caller."))
 
     @property
     def visualize(self) -> Text:

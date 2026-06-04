@@ -1,11 +1,12 @@
-from openhands.sdk import Agent, Conversation, Tool
-from openhands.sdk.agent.replay_llm import ReplayLLM
-from openhands.sdk.agent.replay_callback import ObservationDriftCallback
-from openhands.sdk.conversation.snapshot import SnapshotLoader
-from openhands.tools.terminal import TerminalTool
-from openhands.tools.file_editor import FileEditorTool
-
 import os
+
+from openhands.sdk import Agent, Conversation, Tool
+from openhands.sdk.agent.replay_callback import ObservationDriftCallback
+from openhands.sdk.agent.replay_llm import ReplayLLM  # type: ignore
+from openhands.sdk.conversation.snapshot import SnapshotLoader
+from openhands.tools.file_editor import FileEditorTool
+from openhands.tools.terminal import TerminalTool
+
 
 # Get the location of this python file
 script_dir = str(os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +29,7 @@ conversation = Conversation(
     agent=agent,
     workspace=os.getcwd(),
     persistence_dir=f"{script_dir}/hello_world_recorded",
-    callbacks=[drift_callback]
+    callbacks=[drift_callback],
 )
 
 

@@ -18,7 +18,7 @@ from openhands.sdk.tool.schema import Action
 
 
 # Define a dummy action class once to avoid duplicate kind errors
-class DummyAction(Action):
+class CriticDummyAction(Action):
     """A simple dummy action for testing purposes."""
 
     pass
@@ -172,7 +172,7 @@ def test_agent_finished_critic_without_finish_action():
     assert result.success is False
 
     # Events without FinishAction
-    other_action = DummyAction()
+    other_action = CriticDummyAction()
     events = [
         ActionEvent(
             thought=[TextContent(text="doing something")],
@@ -251,7 +251,7 @@ def test_agent_finished_critic_last_action_not_finish():
     patch = "diff --git a/file.py"
 
     finish_action = FinishAction(message="Task completed")
-    other_action = DummyAction()
+    other_action = CriticDummyAction()
 
     # FinishAction is not the last action
     events = [
